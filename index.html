@@ -152,7 +152,6 @@
   button { cursor:pointer; font-weight:900; transition:transform .04s ease, box-shadow .12s ease, background .12s ease; }
   button:hover { box-shadow:0 7px 15px rgba(15,23,42,.08); }
   button:active { transform:translateY(1px); }
-  button:disabled { opacity:.55; cursor:not-allowed; box-shadow:none; }
   button.primary { background:var(--ink); color:white; border-color:var(--ink); }
   button.accent { background:var(--accent); color:white; border-color:var(--accent); }
   button.blue { background:var(--blue); color:white; border-color:var(--blue); }
@@ -209,6 +208,8 @@
   }
   .map-bike-buttons { display:grid; grid-template-columns:1.4fr 1fr; gap:8px; }
   .map-bike-buttons button { min-height:50px; font-size:15px; }
+  .map-bike-controls > button.full { min-height:46px; font-size:14px; }
+  .map-bike-controls > button.full.active { background:var(--accent); color:white; border-color:var(--accent); }
   .map-bike-speed { display:grid; grid-template-columns:82px 1fr 48px; gap:8px; align-items:center; font-size:13px; }
   .map-bike-speed > div:first-child { font-weight:850; color:#7f1d1d; }
   .map-bike-note { font-size:12px; color:#7f1d1d; line-height:1.55; }
@@ -299,12 +300,13 @@
         <button id="answerBikePlayPauseBtn" class="accent">答え走行 再生</button>
         <button id="answerBikeEndBtn" class="ghost">終了</button>
       </div>
+      <button id="answerLineToggleBtn" class="ghost full" aria-pressed="true">赤線OFF</button>
       <div class="map-bike-speed">
         <div>答え速度</div>
         <input id="answerBikeSpeedSliderMap" type="range" min="25" max="300" value="100">
         <div id="answerBikeSpeedValMap">1.0x</div>
       </div>
-      <div class="map-bike-note">答え確認時は公式赤線だけを表示し、登録済みルート上をバイクが走ります。ここで一時停止・終了できます。</div>
+      <div class="map-bike-note">答え確認時は登録済みルート上をバイクが走ります。走行中でも「赤線ON/OFF」で公式赤線だけを切替できます。</div>
     </div>
   </section>
 
@@ -398,7 +400,7 @@
       <div class="notes">
         <ul>
           <li><strong>暗記モード</strong>: 赤線なし。地図上をドラッグして走行ラインを描く。</li>
-          <li><strong>答え透過 / 答え速度</strong>: 迷ったときだけ公式赤線を薄く表示する。「答え確認」では公式赤線だけを表示し、登録済みルート上を設定した速度でバイクが1回走行する。再生・一時停止・終了はコース図下の操作ボタンで行う。</li>
+          <li><strong>答え透過 / 答え速度</strong>: 迷ったときだけ公式赤線を薄く表示する。「答え確認」では登録済みルート上を設定した速度でバイクが1回走行する。公式赤線はコース図下の「赤線ON/OFF」で走行中も切替できる。</li>
           <li><strong>発着点</strong>: 常に表示。青い発着点マーカーはドラッグして位置を変更できる。</li>
           <li><strong>答えルート登録</strong>: 別タブで赤線上に通過点を置いて保存する。保存後、メイン画面に戻ると答え確認でそのルートを再生する。登録した緑線はメイン画面の答え確認では表示しない。</li>
           <li><strong>時系列再生</strong>: 公式赤線を表示した状態で、描いた順番どおりにバイクだけを走らせる。終了後は書いた線と公式赤線を表示する。</li>
@@ -484,6 +486,7 @@ const answerBikeSpeedSliderMap = document.getElementById('answerBikeSpeedSliderM
 const answerBikeSpeedValMap = document.getElementById('answerBikeSpeedValMap');
 const answerBikePlayPauseBtn = document.getElementById('answerBikePlayPauseBtn');
 const answerBikeEndBtn = document.getElementById('answerBikeEndBtn');
+const answerLineToggleBtn = document.getElementById('answerLineToggleBtn');
 const answerBikeMiniStatus = document.getElementById('answerBikeMiniStatus');
 const replayBtn = document.getElementById('replayBtn');
 const replayStopBtn = document.getElementById('replayStopBtn');
@@ -797,10 +800,21 @@ function setMode(mode) {
   }
   updateView();
 }
+function isAnswerBikeSessionActive() {
+  return answerBikeRaf !== null || answerBikePaused || answerBikeFinished || !!answerBikeRouteCache;
+}
+function updateAnswerLineToggleUi() {
+  if(!answerLineToggleBtn) return;
+  const visible = Number(opacitySlider.value) > 0;
+  answerLineToggleBtn.textContent = visible ? '赤線OFF' : '赤線ON';
+  answerLineToggleBtn.classList.toggle('active', visible);
+  answerLineToggleBtn.setAttribute('aria-pressed', visible ? 'true' : 'false');
+}
 function updateView() {
   const op = Number(opacitySlider.value) / 100;
   opacityVal.textContent = Math.round(op * 100) + '%';
   routeOverlay.style.opacity = op;
+  updateAnswerLineToggleUi();
   for(const key of ['memory','answer']) buttons[key].classList.toggle('active', displayMode === key);
   if(displayMode === 'memory') {
     statusTitle.textContent = '暗記モード';
@@ -1047,7 +1061,7 @@ function resumeAnswerBike() {
   }
   if(answerBikeBaseTime >= answerBikeRouteCache.duration - 20) answerBikeBaseTime = 0;
   statusTitle.textContent = '答え走行中';
-  statusHint.textContent = '公式赤線を表示し、赤線上をバイクが1回だけ走行しています。コース図下で一時停止・終了できます。';
+  statusHint.textContent = '公式赤線を表示し、赤線上をバイクが1回だけ走行しています。コース図下で一時停止・終了・赤線ON/OFFができます。';
   runAnswerBikeLoop();
 }
 function endAnswerBikePlayback(showStatus = true) {
@@ -1088,7 +1102,7 @@ function startAnswerBike() {
   answerBikeBaseTime = 0;
   renderAnswerBikeAt(0);
   statusTitle.textContent = '答え走行中';
-  statusHint.textContent = '公式赤線を表示し、赤線上をバイクが1回だけ走行しています。コース図下で一時停止・終了できます。';
+  statusHint.textContent = '公式赤線を表示し、赤線上をバイクが1回だけ走行しています。コース図下で一時停止・終了・赤線ON/OFFができます。';
   runAnswerBikeLoop();
 }
 function replayDuration() {
@@ -1340,7 +1354,37 @@ function openAnswerRouteEditor() {
   }
 }
 
+function setAnswerLineDuringBike(visible) {
+  opacitySlider.value = visible ? 100 : 0;
+  displayMode = 'answer';
+  answerForced = true;
+  updateView();
+  if(answerBikeRaf !== null) {
+    statusTitle.textContent = '答え走行中';
+    statusHint.textContent = visible
+      ? '公式赤線を表示し、赤線上をバイクが1回だけ走行しています。'
+      : '公式赤線を非表示にして、登録済みルート上をバイクだけ走行しています。';
+  } else if(answerBikePaused) {
+    statusTitle.textContent = '答え走行一時停止';
+    statusHint.textContent = visible
+      ? '公式赤線を表示しています。コース図下の「再開」を押すと、この位置から続けます。'
+      : '公式赤線を非表示にしています。コース図下の「再開」を押すと、この位置から続けます。';
+  } else if(answerBikeFinished) {
+    statusTitle.textContent = '答え走行完了';
+    statusHint.textContent = visible
+      ? '再生完了後も公式赤線を表示しています。'
+      : '再生完了後、公式赤線を非表示にしています。';
+  }
+}
+function toggleAnswerLineDuringBike() {
+  const visible = Number(opacitySlider.value) > 0;
+  setAnswerLineDuringBike(!visible);
+}
 function toggleAnswer() {
+  if(isAnswerBikeSessionActive()) {
+    toggleAnswerLineDuringBike();
+    return;
+  }
   answerForced = !answerForced;
   opacitySlider.value = answerForced ? 100 : 0;
   displayMode = answerForced ? 'answer' : 'memory';
@@ -1366,7 +1410,26 @@ courseSelect.addEventListener('change', e => { stopAnswerBike(); stopReplay(true
 buttons.memory.addEventListener('click', () => { stopReplay(true); answerForced = false; setMode('memory'); });
 buttons.answer.addEventListener('click', () => { stopReplay(true); setMode('answer'); });
 document.getElementById('resetStartMarkerBtn').addEventListener('click', resetStartMarkerPosition);
-opacitySlider.addEventListener('input', () => { stopAnswerBike(); stopReplay(true); displayMode = Number(opacitySlider.value) >= 95 ? 'answer' : 'memory'; updateView(); });
+opacitySlider.addEventListener('input', () => {
+  const bikeActive = isAnswerBikeSessionActive();
+  if(!bikeActive) stopAnswerBike();
+  stopReplay(true);
+  if(bikeActive) {
+    displayMode = 'answer';
+    answerForced = true;
+    updateView();
+    if(answerBikeRaf !== null) {
+      statusTitle.textContent = '答え走行中';
+      statusHint.textContent = Number(opacitySlider.value) > 0
+        ? '公式赤線を表示し、赤線上をバイクが1回だけ走行しています。'
+        : '公式赤線を非表示にして、登録済みルート上をバイクだけ走行しています。';
+    }
+    return;
+  }
+  displayMode = Number(opacitySlider.value) >= 95 ? 'answer' : 'memory';
+  answerForced = Number(opacitySlider.value) >= 95;
+  updateView();
+});
 replayBtn.addEventListener('click', startReplay);
 replayStopBtn.addEventListener('click', () => stopReplay(true));
 replaySlider.addEventListener('input', scrubReplay);
@@ -1375,6 +1438,10 @@ if(answerBikeSpeedSlider) answerBikeSpeedSlider.addEventListener('input', () => 
 if(answerBikeSpeedSliderMap) answerBikeSpeedSliderMap.addEventListener('input', () => setAnswerBikeSpeed(answerBikeSpeedSliderMap.value));
 if(answerBikePlayPauseBtn) answerBikePlayPauseBtn.addEventListener('click', toggleAnswerBikePlayPause);
 if(answerBikeEndBtn) answerBikeEndBtn.addEventListener('click', () => endAnswerBikePlayback(true));
+if(answerLineToggleBtn) answerLineToggleBtn.addEventListener('click', () => {
+  if(isAnswerBikeSessionActive()) toggleAnswerLineDuringBike();
+  else toggleAnswer();
+});
 document.getElementById('clearBtn').addEventListener('click', () => clearDrawing(true));
 document.getElementById('swapBtn').addEventListener('click', () => { stopAnswerBike(); stopReplay(true); courseKey = courseKey === 'course1' ? 'course2' : 'course1'; setImages(); updateView(); });
 document.getElementById('showAnswerBtn').addEventListener('click', () => { stopReplay(true); toggleAnswer(); });
