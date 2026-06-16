@@ -103,6 +103,7 @@
   .route-registering #drawCanvas { cursor:copy; }
   .route-registering .marker { pointer-events:none; opacity:.70; }
   .replay-bike { position:absolute; left:0; top:0; width:42px; height:30px; z-index:6; display:none; pointer-events:none; transform:translate(-50%,-50%); transform-origin:center center; filter:drop-shadow(0 3px 5px rgba(0,0,0,.28)); }
+  .replay-bike.user-bike { width:38px; height:28px; z-index:7; filter:drop-shadow(0 3px 6px rgba(22,101,52,.34)); }
   .replay-bike.show { display:block; }
   .replay-bike svg { display:block; width:100%; height:100%; overflow:visible; }
   .marker { position:absolute; transform:translate(-50%,-50%); z-index:5; display:block; pointer-events:auto; cursor:grab; touch-action:none; }
@@ -269,7 +270,7 @@
         <span class="pill">線幅 4px固定</span>
         <span class="pill">描画フェード 3%</span>
         <span class="pill">再生時は答え表示</span>
-        <span class="pill">答え確認でバイク走行</span>
+        <span class="pill">答え確認で2台比較</span>
       </div>
     </div>
     <div class="map-wrap" id="mapWrap" aria-label="大型二輪コース図">
@@ -289,6 +290,18 @@
           <path d="M29 14 L35 23" fill="none" stroke="#dc2626" stroke-width="5" stroke-linecap="round"/>
         </svg>
       </div>
+      <div id="userReplayBike" class="replay-bike user-bike" aria-hidden="true">
+        <svg viewBox="0 0 64 40" role="img" focusable="false">
+          <circle cx="15" cy="29" r="8" fill="#111827"/>
+          <circle cx="15" cy="29" r="4" fill="#f9fafb"/>
+          <circle cx="49" cy="29" r="8" fill="#111827"/>
+          <circle cx="49" cy="29" r="4" fill="#f9fafb"/>
+          <path d="M18 27 L28 15 L39 27 M25 27 H43 L35 15 H27" fill="none" stroke="#16a34a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M34 13 L43 9 L52 13" fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="31" cy="9" r="5" fill="#f59e0b" stroke="#ffffff" stroke-width="2"/>
+          <path d="M29 14 L35 23" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+      </div>
       <div id="startMarker" class="marker" style="left:82.2%; top:63.0%;" role="button" aria-label="発着点。ドラッグして位置を変更できます" title="発着点：ドラッグで変更"><div class="dot"></div><span>発着点</span></div>
     </div>
     <div class="map-bike-controls" aria-label="答え走行操作">
@@ -306,7 +319,7 @@
         <input id="answerBikeSpeedSliderMap" type="range" min="25" max="300" value="100">
         <div id="answerBikeSpeedValMap">1.0x</div>
       </div>
-      <div class="map-bike-note">答え確認時は登録済みルート上をバイクが走ります。走行中でも「赤線ON/OFF」で公式赤線だけを切替できます。</div>
+      <div class="map-bike-note">答え確認時は、赤線ルートのバイクに加えて、書いた線がある場合は自分の線のバイクも同時に走ります。赤線ON/OFFは走行中も切替できます。</div>
     </div>
   </section>
 
@@ -447,6 +460,7 @@ let answerBikeRaf = null;
 let answerBikeStartedAt = 0;
 let answerBikeBaseTime = 0;
 let answerBikeRouteCache = null;
+let answerUserBikeRouteCache = null;
 let answerBikePaused = false;
 let answerBikeFinished = false;
 
@@ -456,6 +470,7 @@ const routeOverlay = document.getElementById('routeOverlay');
 const drawCanvas = document.getElementById('drawCanvas');
 const answerPathCanvas = document.getElementById('answerPathCanvas');
 const replayBike = document.getElementById('replayBike');
+const userReplayBike = document.getElementById('userReplayBike');
 const startMarker = document.getElementById('startMarker');
 const ctx = drawCanvas.getContext('2d');
 const answerPathCtx = answerPathCanvas.getContext('2d');
@@ -925,7 +940,7 @@ function currentAnswerBikeElapsed() {
 function setAnswerBikeSpeed(value = answerBikeSpeedSlider ? answerBikeSpeedSlider.value : 100) {
   const v = Math.max(25, Math.min(300, Number(value) || 100));
   if(answerBikeRaf !== null && answerBikeRouteCache) {
-    answerBikeBaseTime = Math.max(0, Math.min(answerBikeRouteCache.duration, currentAnswerBikeElapsed()));
+    answerBikeBaseTime = Math.max(0, Math.min(currentAnswerBikeSessionDuration(), currentAnswerBikeElapsed()));
     answerBikeStartedAt = performance.now();
   }
   if(answerBikeSpeedSlider) answerBikeSpeedSlider.value = v;
@@ -970,6 +985,46 @@ function answerBikePointAt(route, elapsedMs) {
   const angle = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
   return { x, y, angle };
 }
+
+function buildUserDrawnBikeRoute() {
+  const c = current();
+  if(!drawnSegments.length) return null;
+  const segments = [];
+  let total = 0;
+  for(const seg of drawnSegments) {
+    const x1 = Number(seg.x1), y1 = Number(seg.y1), x2 = Number(seg.x2), y2 = Number(seg.y2);
+    if(!Number.isFinite(x1) || !Number.isFinite(y1) || !Number.isFinite(x2) || !Number.isFinite(y2)) continue;
+    const dx = (x2 - x1) * c.w;
+    const dy = (y2 - y1) * c.h;
+    const len = Math.hypot(dx, dy);
+    if(len < 0.5) continue;
+    const startLen = total;
+    total += len;
+    segments.push({ x1, y1, x2, y2, startLen, endLen: total });
+  }
+  if(!segments.length || total <= 0) return null;
+  return { segments, total, duration: Math.max(4000, total / ANSWER_BIKE_SPEED_PX_PER_SEC * 1000) };
+}
+function userDrawnBikePointAt(route, elapsedMs) {
+  if(!route || !route.segments || !route.segments.length) return null;
+  const elapsed = Math.max(0, Math.min(route.duration, elapsedMs || 0));
+  const targetLen = route.duration ? (elapsed / route.duration) * route.total : 0;
+  let idx = 0;
+  while(idx < route.segments.length - 1 && route.segments[idx].endLen < targetLen) idx++;
+  const seg = route.segments[idx];
+  const span = Math.max(0.0001, seg.endLen - seg.startLen);
+  const r = Math.max(0, Math.min(1, (targetLen - seg.startLen) / span));
+  const x = seg.x1 + (seg.x2 - seg.x1) * r;
+  const y = seg.y1 + (seg.y2 - seg.y1) * r;
+  const angle = Math.atan2(seg.y2 - seg.y1, seg.x2 - seg.x1) * 180 / Math.PI;
+  return { x, y, angle };
+}
+function currentAnswerBikeSessionDuration() {
+  return Math.max(answerBikeRouteCache ? answerBikeRouteCache.duration : 0, answerUserBikeRouteCache ? answerUserBikeRouteCache.duration : 0);
+}
+function answerBikeHasUserRoute() {
+  return !!(answerUserBikeRouteCache && answerUserBikeRouteCache.segments && answerUserBikeRouteCache.segments.length);
+}
 function renderAnswerBikeAt(elapsedMs) {
   const route = answerBikeRouteCache;
   const rect = mapWrap.getBoundingClientRect();
@@ -977,12 +1032,20 @@ function renderAnswerBikeAt(elapsedMs) {
     hideReplayBike();
     return;
   }
-  const p = answerBikePointAt(route, elapsedMs);
+  const p = answerBikePointAt(route, Math.min(elapsedMs || 0, route.duration));
   if(!p) {
     hideReplayBike();
     return;
   }
   showReplayBikeAt(p.x * rect.width, p.y * rect.height, p.angle);
+
+  if(answerUserBikeRouteCache) {
+    const up = userDrawnBikePointAt(answerUserBikeRouteCache, Math.min(elapsedMs || 0, answerUserBikeRouteCache.duration));
+    if(up) showUserReplayBikeAt(up.x * rect.width, up.y * rect.height, up.angle);
+    else hideUserReplayBike();
+  } else {
+    hideUserReplayBike();
+  }
 }
 function updateAnswerBikeControlUi() {
   const running = answerBikeRaf !== null;
@@ -996,7 +1059,8 @@ function updateAnswerBikeControlUi() {
   }
   if(answerBikeEndBtn) answerBikeEndBtn.disabled = !running && !paused && !finished && !answerBikeRouteCache;
   if(answerBikeMiniStatus) {
-    answerBikeMiniStatus.textContent = running ? '走行中' : (paused ? '一時停止中' : (finished ? '完了' : (hasRegisteredRoute ? '再生可' : '未登録')));
+    const twoBike = answerBikeHasUserRoute();
+    answerBikeMiniStatus.textContent = running ? (twoBike ? '2台走行中' : '走行中') : (paused ? (twoBike ? '2台一時停止中' : '一時停止中') : (finished ? '完了' : (hasRegisteredRoute ? (drawnSegments.length ? '2台再生可' : '再生可') : '未登録')));
   }
 }
 function stopAnswerBike(hideBike = true) {
@@ -1004,6 +1068,7 @@ function stopAnswerBike(hideBike = true) {
   answerBikeRaf = null;
   answerBikeBaseTime = 0;
   answerBikeRouteCache = null;
+  answerUserBikeRouteCache = null;
   answerBikePaused = false;
   answerBikeFinished = false;
   if(hideBike) hideReplayBike();
@@ -1015,11 +1080,14 @@ function finishAnswerBikePlayback() {
   answerBikePaused = false;
   answerBikeFinished = true;
   if(answerBikeRouteCache) {
-    answerBikeBaseTime = answerBikeRouteCache.duration;
-    renderAnswerBikeAt(answerBikeRouteCache.duration);
+    const duration = currentAnswerBikeSessionDuration();
+    answerBikeBaseTime = duration;
+    renderAnswerBikeAt(duration);
   }
   statusTitle.textContent = '答え走行完了';
-  statusHint.textContent = '公式赤線の走行イメージを1回再生しました。コース図下の「もう一度再生」で最初から確認できます。';
+  statusHint.textContent = answerBikeHasUserRoute()
+    ? '公式赤線ルートのバイクと、自分で書いた線のバイクを1回再生しました。コース図下の「もう一度再生」で再確認できます。'
+    : '公式赤線の走行イメージを1回再生しました。コース図下の「もう一度再生」で最初から確認できます。';
   updateAnswerBikeControlUi();
 }
 function runAnswerBikeLoop() {
@@ -1034,7 +1102,7 @@ function runAnswerBikeLoop() {
     }
     const elapsed = currentAnswerBikeElapsed();
     renderAnswerBikeAt(elapsed);
-    if(elapsed >= answerBikeRouteCache.duration) {
+    if(elapsed >= currentAnswerBikeSessionDuration()) {
       finishAnswerBikePlayback();
       return;
     }
@@ -1044,7 +1112,7 @@ function runAnswerBikeLoop() {
 }
 function pauseAnswerBike() {
   if(answerBikeRaf === null || !answerBikeRouteCache) return;
-  answerBikeBaseTime = Math.max(0, Math.min(answerBikeRouteCache.duration, currentAnswerBikeElapsed()));
+  answerBikeBaseTime = Math.max(0, Math.min(currentAnswerBikeSessionDuration(), currentAnswerBikeElapsed()));
   cancelAnimationFrame(answerBikeRaf);
   answerBikeRaf = null;
   answerBikePaused = true;
@@ -1059,9 +1127,11 @@ function resumeAnswerBike() {
     startAnswerBike();
     return;
   }
-  if(answerBikeBaseTime >= answerBikeRouteCache.duration - 20) answerBikeBaseTime = 0;
+  if(answerBikeBaseTime >= currentAnswerBikeSessionDuration() - 20) answerBikeBaseTime = 0;
   statusTitle.textContent = '答え走行中';
-  statusHint.textContent = '公式赤線を表示し、赤線上をバイクが1回だけ走行しています。コース図下で一時停止・終了・赤線ON/OFFができます。';
+  statusHint.textContent = answerBikeHasUserRoute()
+    ? '公式赤線ルートのバイクと、自分で書いた線を走るバイクの2台を同時に走らせています。コース図下で一時停止・終了・赤線ON/OFFができます。'
+    : '公式赤線を表示しています。バイク走行はそのまま続きます。コース図下で一時停止・終了・赤線ON/OFFができます。';
   runAnswerBikeLoop();
 }
 function endAnswerBikePlayback(showStatus = true) {
@@ -1092,7 +1162,9 @@ function startAnswerBike() {
   opacitySlider.value = 100;
   updateView();
   answerBikeRouteCache = buildAnswerBikeRoute();
+  answerUserBikeRouteCache = buildUserDrawnBikeRoute();
   if(!answerBikeRouteCache) {
+    answerUserBikeRouteCache = null;
     statusTitle.textContent = '答えルート未登録';
     statusHint.textContent = '先に「答えルート登録を別タブで開く」から公式赤線上を発着点から順番にタップして保存してください。';
     hideReplayBike();
@@ -1102,7 +1174,9 @@ function startAnswerBike() {
   answerBikeBaseTime = 0;
   renderAnswerBikeAt(0);
   statusTitle.textContent = '答え走行中';
-  statusHint.textContent = '公式赤線を表示し、赤線上をバイクが1回だけ走行しています。コース図下で一時停止・終了・赤線ON/OFFができます。';
+  statusHint.textContent = answerBikeHasUserRoute()
+    ? '公式赤線ルートのバイクと、自分で書いた線を走るバイクの2台を同時に走らせています。コース図下で一時停止・終了・赤線ON/OFFができます。'
+    : '公式赤線を表示しています。バイク走行はそのまま続きます。コース図下で一時停止・終了・赤線ON/OFFができます。';
   runAnswerBikeLoop();
 }
 function replayDuration() {
@@ -1128,18 +1202,32 @@ function setReplaySpeed(value = replaySpeedSlider.value) {
   replaySpeedSlider.value = v;
   replaySpeedVal.textContent = (v / 100).toFixed(1) + 'x';
 }
-function hideReplayBike() {
-  replayBike.classList.remove('show');
+function hideBikeElement(bikeEl) {
+  if(bikeEl) bikeEl.classList.remove('show');
 }
-function showReplayBikeAt(x, y, angleDeg) {
+function hideReplayBike() {
+  hideBikeElement(replayBike);
+  hideBikeElement(userReplayBike);
+}
+function showBikeElementAt(bikeEl, x, y, angleDeg) {
+  if(!bikeEl) return;
   if(!Number.isFinite(x) || !Number.isFinite(y)) {
-    hideReplayBike();
+    hideBikeElement(bikeEl);
     return;
   }
-  replayBike.style.left = x + 'px';
-  replayBike.style.top = y + 'px';
-  replayBike.style.transform = 'translate(-50%,-50%) rotate(' + (Number.isFinite(angleDeg) ? angleDeg : 0) + 'deg)';
-  replayBike.classList.add('show');
+  bikeEl.style.left = x + 'px';
+  bikeEl.style.top = y + 'px';
+  bikeEl.style.transform = 'translate(-50%,-50%) rotate(' + (Number.isFinite(angleDeg) ? angleDeg : 0) + 'deg)';
+  bikeEl.classList.add('show');
+}
+function showReplayBikeAt(x, y, angleDeg) {
+  showBikeElementAt(replayBike, x, y, angleDeg);
+}
+function showUserReplayBikeAt(x, y, angleDeg) {
+  showBikeElementAt(userReplayBike, x, y, angleDeg);
+}
+function hideUserReplayBike() {
+  hideBikeElement(userReplayBike);
 }
 function renderReplayAt(ms, options = {}) {
   const rect = drawCanvas.getBoundingClientRect();
@@ -1362,8 +1450,8 @@ function setAnswerLineDuringBike(visible) {
   if(answerBikeRaf !== null) {
     statusTitle.textContent = '答え走行中';
     statusHint.textContent = visible
-      ? '公式赤線を表示し、赤線上をバイクが1回だけ走行しています。'
-      : '公式赤線を非表示にして、登録済みルート上をバイクだけ走行しています。';
+      ? '公式赤線を表示しています。バイク走行はそのまま続きます。'
+      : '公式赤線を非表示にしています。バイク走行はそのまま続きます。';
   } else if(answerBikePaused) {
     statusTitle.textContent = '答え走行一時停止';
     statusHint.textContent = visible
@@ -1421,8 +1509,8 @@ opacitySlider.addEventListener('input', () => {
     if(answerBikeRaf !== null) {
       statusTitle.textContent = '答え走行中';
       statusHint.textContent = Number(opacitySlider.value) > 0
-        ? '公式赤線を表示し、赤線上をバイクが1回だけ走行しています。'
-        : '公式赤線を非表示にして、登録済みルート上をバイクだけ走行しています。';
+        ? '公式赤線を表示しています。バイク走行はそのまま続きます。'
+        : '公式赤線を非表示にしています。バイク走行はそのまま続きます。';
     }
     return;
   }
