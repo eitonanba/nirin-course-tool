@@ -129,6 +129,25 @@
   }
   .control-section.primary-panel { background:#ffffff; }
   .control-section.replay-panel { background:var(--blue-soft); border-color:#bfdbfe; }
+  .mode-switch-panel { background:#ffffff; border-color:#cbd5e1; }
+  .app-mode-tabs { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .app-mode-tabs button { min-height:54px; padding:9px 8px; line-height:1.25; }
+  .app-mode-tabs button span { display:block; font-size:11px; font-weight:800; opacity:.75; margin-top:2px; }
+  .app-mode-tabs button.active { background:var(--ink); color:white; border-color:var(--ink); box-shadow:0 7px 15px rgba(15,23,42,.16); }
+  .app-mode-hint { border-radius:13px; padding:9px 10px; background:#f8fafc; border:1px solid #e2e8f0; color:#475569; font-size:12px; line-height:1.55; font-weight:750; }
+  .app-panel { display:none; }
+  body[data-app-mode="practice"] .app-panel-practice,
+  body[data-app-mode="answer"] .app-panel-answer,
+  body[data-app-mode="route"] .app-panel-route { display:grid; }
+  body[data-app-mode="practice"] .viewer-title small::after { content:' 現在は「練習する」モードです。'; }
+  body[data-app-mode="answer"] .viewer-title small::after { content:' 現在は「答えを見る」モードです。'; }
+  body[data-app-mode="route"] .viewer-title small::after { content:' 現在は「ルート登録」モードです。'; }
+  .status-panel { background:#ffffff; }
+  .comparison-legend { display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:13px; font-weight:900; color:#334155; }
+  .legend-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border:1px solid #e2e8f0; border-radius:999px; background:white; }
+  .legend-dot { width:11px; height:11px; border-radius:999px; display:inline-block; box-shadow:0 0 0 2px white,0 0 0 3px #e2e8f0; }
+  .legend-dot.answer { background:#dc2626; }
+  .legend-dot.user { background:#16a34a; }
   .section-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
   .section-label {
     color:#0f172a;
@@ -182,10 +201,11 @@
     background:linear-gradient(180deg,#fff7f7 0%,#ffffff 100%);
     border-radius:18px;
     padding:12px;
-    display:grid;
+    display:none;
     gap:10px;
     box-shadow:var(--shadow-soft);
   }
+  body[data-app-mode="answer"] .map-bike-controls { display:grid; }
   .map-bike-head {
     display:flex;
     align-items:center;
@@ -228,6 +248,8 @@
     .viewer, .side { padding:10px; }
     .card { border-radius:18px; }
     .mode-grid { grid-template-columns:1fr; }
+    .app-mode-tabs { grid-template-columns:1fr; }
+    .app-mode-tabs button { min-height:48px; }
     .row.nowrap { flex-wrap:wrap; }
     .slider-row { grid-template-columns:74px 1fr 44px; font-size:12px; }
     select,button { min-height:44px; padding:10px 11px; }
@@ -250,7 +272,7 @@
 
 </style>
 </head>
-<body>
+<body data-app-mode="practice">
 <header class="app-header">
   <div>
     <p class="eyebrow">大型二輪コース暗記ツール</p>
@@ -324,9 +346,22 @@
   </section>
 
   <aside class="card side">
+    <section class="control-section mode-switch-panel" aria-label="操作モード">
+      <div class="section-head">
+        <div class="section-label">操作モード</div>
+        <div class="section-help">使う機能だけ表示</div>
+      </div>
+      <div class="app-mode-tabs" role="tablist" aria-label="操作モード切替">
+        <button id="memoryBtn" class="active" type="button">練習する<span>描く・リセット</span></button>
+        <button id="answerBtn" type="button">答えを見る<span>2台で比較</span></button>
+        <button id="routeModeBtn" type="button">ルート登録<span>別タブで編集</span></button>
+      </div>
+      <div id="appModeHint" class="app-mode-hint">赤線なしの地図に、自分の走行ラインを描くモードです。</div>
+    </section>
+
     <section class="control-section primary-panel" aria-label="コース選択">
       <div class="section-head">
-        <div class="section-label">1. コース</div>
+        <div class="section-label">コース</div>
       </div>
       <select id="courseSelect" aria-label="コース選択">
         <option value="course1">大型二輪 1号コース</option>
@@ -335,57 +370,37 @@
       <button id="swapBtn" class="ghost full">もう一方のコースへ</button>
     </section>
 
-    <section class="control-section" aria-label="表示設定">
+    <section class="control-section status-panel" aria-label="現在の状態">
       <div class="section-head">
-        <div class="section-label">2. 表示</div>
-        <div class="section-help">答えを見るとバイクも1回走行</div>
-      </div>
-      <div class="mode-grid" aria-label="表示モード">
-        <button id="memoryBtn" class="active">暗記モード</button>
-        <button id="answerBtn">答え確認</button>
-      </div>
-      <div class="slider-row">
-        <div>答え透過</div>
-        <input id="opacitySlider" type="range" min="0" max="100" value="0">
-        <div id="opacityVal">0%</div>
-      </div>
-      <div class="slider-row">
-        <div>答え速度</div>
-        <input id="answerBikeSpeedSlider" type="range" min="25" max="300" value="100">
-        <div id="answerBikeSpeedVal">1.0x</div>
-      </div>
-      <button id="showAnswerBtn" class="blue full">答えON/OFF</button>
-    </section>
-
-    <section class="control-section" aria-label="答えルート登録">
-      <div class="section-head">
-        <div class="section-label">3. 答えルート登録</div>
-        <div class="section-help">別タブで登録・修正</div>
-      </div>
-      <button id="openRouteEditorBtn" class="blue full">答えルート登録を別タブで開く</button>
-      <button id="refreshRouteStatusBtn" class="ghost full">登録状態を更新</button>
-      <div class="mini" id="routePointStatus">このコースの答えルートは未登録です。</div>
-    </section>
-
-    <section class="control-section" aria-label="練習操作">
-      <div class="section-head">
-        <div class="section-label">4. 練習</div>
-        <div class="section-help">描く・リセット</div>
+        <div class="section-label">状態</div>
       </div>
       <div class="status" id="statusBox">
         <div class="big" id="statusTitle">暗記モード</div>
         <div class="hint" id="statusHint">赤線を消した地図に、始点から終点まで自分でラインをなぞってください。</div>
       </div>
+    </section>
+
+    <section class="control-section app-panel app-panel-practice" aria-label="練習操作">
+      <div class="section-head">
+        <div class="section-label">練習する</div>
+        <div class="section-help">描く・赤線ヒント・リセット</div>
+      </div>
+      <button id="showAnswerBtn" class="blue full">赤線ヒント ON/OFF</button>
+      <div class="slider-row">
+        <div>答え透過</div>
+        <input id="opacitySlider" type="range" min="0" max="100" value="0">
+        <div id="opacityVal">0%</div>
+      </div>
       <button id="clearBtn" class="ghost full">書いた線をリセット</button>
     </section>
 
-    <section class="control-section replay-panel" aria-label="時系列再生">
+    <section class="control-section replay-panel app-panel app-panel-practice" aria-label="時系列再生">
       <div class="section-head">
-        <div class="section-label">5. 時系列再生</div>
-        <div class="section-help">答えを出してバイクだけ走行</div>
+        <div class="section-label">自分の順番を見る</div>
+        <div class="section-help">描いた順にバイク走行</div>
       </div>
       <div class="row nowrap">
-        <button id="replayBtn" class="blue">時系列再生</button>
+        <button id="replayBtn" class="blue">自分のバイクを再生</button>
         <button id="replayStopBtn" class="ghost">停止</button>
       </div>
       <div class="slider-row">
@@ -400,9 +415,36 @@
       </div>
     </section>
 
-    <section class="control-section" aria-label="発着点設定">
+    <section class="control-section app-panel app-panel-answer" aria-label="答えを見る">
       <div class="section-head">
-        <div class="section-label">6. 発着点</div>
+        <div class="section-label">答えを見る</div>
+        <div class="section-help">正解と自分を比較</div>
+      </div>
+      <div class="comparison-legend" aria-label="バイク凡例">
+        <span class="legend-pill"><span class="legend-dot answer"></span>正解バイク</span>
+        <span class="legend-pill"><span class="legend-dot user"></span>自分のバイク</span>
+      </div>
+      <div class="slider-row">
+        <div>答え速度</div>
+        <input id="answerBikeSpeedSlider" type="range" min="25" max="300" value="100">
+        <div id="answerBikeSpeedVal">1.0x</div>
+      </div>
+      <div class="mini">再生・一時停止・終了・赤線ON/OFFは、コース図のすぐ下にある「答え走行」パネルから操作します。書いた線がある場合は2台で比較再生します。</div>
+    </section>
+
+    <section class="control-section app-panel app-panel-route" aria-label="答えルート登録">
+      <div class="section-head">
+        <div class="section-label">ルート登録</div>
+        <div class="section-help">別タブで登録・修正</div>
+      </div>
+      <button id="openRouteEditorBtn" class="blue full">答えルート登録を別タブで開く</button>
+      <button id="refreshRouteStatusBtn" class="ghost full">登録状態を更新</button>
+      <div class="mini" id="routePointStatus">このコースの答えルートは未登録です。</div>
+    </section>
+
+    <section class="control-section app-panel app-panel-practice app-panel-route" aria-label="発着点設定">
+      <div class="section-head">
+        <div class="section-label">発着点</div>
         <div class="section-help">青いマーカーをドラッグ</div>
       </div>
       <button id="resetStartMarkerBtn" class="ghost full">発着点を初期位置へ戻す</button>
@@ -412,11 +454,10 @@
       <summary>使い方</summary>
       <div class="notes">
         <ul>
-          <li><strong>暗記モード</strong>: 赤線なし。地図上をドラッグして走行ラインを描く。</li>
-          <li><strong>答え透過 / 答え速度</strong>: 迷ったときだけ公式赤線を薄く表示する。「答え確認」では登録済みルート上を設定した速度でバイクが1回走行する。公式赤線はコース図下の「赤線ON/OFF」で走行中も切替できる。</li>
+          <li><strong>練習する</strong>: 赤線なしの地図に走行ラインを描く。必要なときだけ赤線ヒントをONにする。</li>
+          <li><strong>答えを見る</strong>: 登録済みの正解ルートを走るバイクと、自分で書いた線を走るバイクを比較する。</li>
+          <li><strong>ルート登録</strong>: 別タブで赤線上に通過点を置いて保存する。保存後、メイン画面に戻ると答え確認でそのルートを再生する。</li>
           <li><strong>発着点</strong>: 常に表示。青い発着点マーカーはドラッグして位置を変更できる。</li>
-          <li><strong>答えルート登録</strong>: 別タブで赤線上に通過点を置いて保存する。保存後、メイン画面に戻ると答え確認でそのルートを再生する。登録した緑線はメイン画面の答え確認では表示しない。</li>
-          <li><strong>時系列再生</strong>: 公式赤線を表示した状態で、描いた順番どおりにバイクだけを走らせる。終了後は書いた線と公式赤線を表示する。</li>
         </ul>
       </div>
     </details>
@@ -427,9 +468,9 @@
     <div class="mini">
       操作ショートカット
       <div class="shortcut-row">
-        <span><span class="kbd">A</span> 答えON/OFF</span>
+        <span><span class="kbd">A</span> 赤線ON/OFF</span>
         <span><span class="kbd">C</span> リセット</span>
-        <span><span class="kbd">R</span> 時系列再生</span>
+        <span><span class="kbd">R</span> 自分の順番再生</span>
       </div>
     </div>
   </aside>
@@ -516,6 +557,9 @@ const buttons = {
   memory: document.getElementById('memoryBtn'),
   answer: document.getElementById('answerBtn')
 };
+const routeModeBtn = document.getElementById('routeModeBtn');
+const appModeHint = document.getElementById('appModeHint');
+let currentAppMode = 'practice';
 const openRouteEditorBtn = document.getElementById('openRouteEditorBtn');
 const refreshRouteStatusBtn = document.getElementById('refreshRouteStatusBtn');
 const routeEditBtn = document.getElementById('routeEditBtn');
@@ -526,6 +570,66 @@ const routeExportBtn = document.getElementById('routeExportBtn');
 const routeImportBtn = document.getElementById('routeImportBtn');
 const routePointStatus = document.getElementById('routePointStatus');
 const routeDataBox = document.getElementById('routeDataBox');
+
+
+function updateAppModeUi() {
+  document.body.dataset.appMode = currentAppMode;
+  const hints = {
+    practice: '赤線なしの地図に、自分の走行ラインを描くモードです。赤線ヒントと自分の順番再生だけを表示します。',
+    answer: '登録済みの正解ルートと、自分で書いた線を2台のバイクで比較するモードです。',
+    route: '正解バイクが走るルートを別タブで登録・修正するモードです。'
+  };
+  if(appModeHint) appModeHint.textContent = hints[currentAppMode] || '';
+  if(buttons.memory) buttons.memory.classList.toggle('active', currentAppMode === 'practice');
+  if(buttons.answer) buttons.answer.classList.toggle('active', currentAppMode === 'answer');
+  if(routeModeBtn) routeModeBtn.classList.toggle('active', currentAppMode === 'route');
+}
+function switchAppMode(mode) {
+  currentAppMode = mode;
+  if(mode === 'practice') {
+    stopAnswerBike();
+    stopReplay(true);
+    answerBikePaused = false;
+    answerBikeFinished = false;
+    displayMode = answerForced ? 'answer' : 'memory';
+    updateView();
+    statusTitle.textContent = answerForced ? '赤線ヒント表示中' : '練習モード';
+    statusHint.textContent = answerForced
+      ? '赤線ヒントを見ながら練習できます。バイク比較を見たいときは「答えを見る」を選んでください。'
+      : '赤線なしの地図に、始点から終点まで自分でラインをなぞってください。';
+  } else if(mode === 'answer') {
+    stopReplay(true);
+    answerForced = true;
+    opacitySlider.value = 100;
+    displayMode = 'answer';
+    updateView();
+    startAnswerBike();
+  } else if(mode === 'route') {
+    stopAnswerBike();
+    stopReplay(true);
+    displayMode = 'memory';
+    answerForced = false;
+    opacitySlider.value = 0;
+    updateView();
+    refreshAnswerRoutesFromStorage(false);
+    statusTitle.textContent = 'ルート登録モード';
+    statusHint.textContent = '「答えルート登録を別タブで開く」から、正解バイクが走る通過点を登録・修正します。';
+  }
+  updateAppModeUi();
+}
+function togglePracticeAnswerHint() {
+  stopAnswerBike();
+  stopReplay(true);
+  answerForced = !answerForced;
+  opacitySlider.value = answerForced ? 100 : 0;
+  displayMode = answerForced ? 'answer' : 'memory';
+  updateView();
+  statusTitle.textContent = answerForced ? '赤線ヒント表示中' : '練習モード';
+  statusHint.textContent = answerForced
+    ? '公式赤線をヒントとして表示しています。バイク比較を見たいときは「答えを見る」を選んでください。'
+    : '赤線なしの地図に戻しました。始点から終点まで自分でラインをなぞってください。';
+  updateAppModeUi();
+}
 
 
 function loadStartMarkerPositions() {
@@ -830,7 +934,7 @@ function updateView() {
   opacityVal.textContent = Math.round(op * 100) + '%';
   routeOverlay.style.opacity = op;
   updateAnswerLineToggleUi();
-  for(const key of ['memory','answer']) buttons[key].classList.toggle('active', displayMode === key);
+  updateAppModeUi();
   if(displayMode === 'memory') {
     statusTitle.textContent = '暗記モード';
     statusHint.textContent = '赤線を消した地図に、赤線と矢印の流れを思い出して始点から終点までなぞります。';
@@ -1469,6 +1573,10 @@ function toggleAnswerLineDuringBike() {
   setAnswerLineDuringBike(!visible);
 }
 function toggleAnswer() {
+  if(currentAppMode === 'practice' && !isAnswerBikeSessionActive()) {
+    togglePracticeAnswerHint();
+    return;
+  }
   if(isAnswerBikeSessionActive()) {
     toggleAnswerLineDuringBike();
     return;
@@ -1495,8 +1603,9 @@ if(routeExportBtn) routeExportBtn.addEventListener('click', exportAnswerRoutes);
 if(routeImportBtn) routeImportBtn.addEventListener('click', importAnswerRoutes);
 
 courseSelect.addEventListener('change', e => { stopAnswerBike(); stopReplay(true); courseKey = e.target.value; setImages(); updateView(); });
-buttons.memory.addEventListener('click', () => { stopReplay(true); answerForced = false; setMode('memory'); });
-buttons.answer.addEventListener('click', () => { stopReplay(true); setMode('answer'); });
+buttons.memory.addEventListener('click', () => switchAppMode('practice'));
+buttons.answer.addEventListener('click', () => switchAppMode('answer'));
+if(routeModeBtn) routeModeBtn.addEventListener('click', () => switchAppMode('route'));
 document.getElementById('resetStartMarkerBtn').addEventListener('click', resetStartMarkerPosition);
 opacitySlider.addEventListener('input', () => {
   const bikeActive = isAnswerBikeSessionActive();
@@ -1532,7 +1641,7 @@ if(answerLineToggleBtn) answerLineToggleBtn.addEventListener('click', () => {
 });
 document.getElementById('clearBtn').addEventListener('click', () => clearDrawing(true));
 document.getElementById('swapBtn').addEventListener('click', () => { stopAnswerBike(); stopReplay(true); courseKey = courseKey === 'course1' ? 'course2' : 'course1'; setImages(); updateView(); });
-document.getElementById('showAnswerBtn').addEventListener('click', () => { stopReplay(true); toggleAnswer(); });
+document.getElementById('showAnswerBtn').addEventListener('click', () => togglePracticeAnswerHint());
 
 startMarker.addEventListener('pointerdown', (e) => {
   if(answerRouteEditMode) return;
@@ -1583,6 +1692,7 @@ updateReplayUi(0);
 setImages();
 setBrushWidth();
 updateView();
+updateAppModeUi();
 </script>
 </body>
 </html>
