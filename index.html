@@ -106,9 +106,9 @@
   .replay-bike.user-bike { width:38px; height:28px; z-index:7; filter:drop-shadow(0 3px 6px rgba(22,101,52,.34)); }
   .replay-bike.show { display:block; }
   .replay-bike svg { display:block; width:100%; height:100%; overflow:visible; }
-  .marker { position:absolute; transform:translate(-50%,-50%); z-index:5; display:block; pointer-events:auto; cursor:grab; touch-action:none; }
+  .marker { position:absolute; transform:translate(-50%,-50%); z-index:5; display:block; pointer-events:none; cursor:default; touch-action:none; }
   .marker .dot { width:22px; height:22px; border-radius:999px; border:3px solid white; box-shadow:0 0 0 3px var(--blue),0 3px 10px rgba(0,0,0,.25); background:var(--blue); }
-  .marker.dragging { cursor:grabbing; }
+  .marker.dragging { cursor:default; }
   .marker span { position:absolute; left:26px; top:50%; transform:translateY(-50%); white-space:nowrap; background:white; border:1px solid var(--line); border-radius:999px; padding:4px 9px; font-weight:900; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,.12); }
   .side {
     padding:14px;
@@ -139,9 +139,9 @@
   body[data-app-mode="practice"] .app-panel-practice,
   body[data-app-mode="answer"] .app-panel-answer,
   body[data-app-mode="route"] .app-panel-route { display:grid; }
-  body[data-app-mode="practice"] .viewer-title small::after { content:' 現在は「練習する」モードです。'; }
-  body[data-app-mode="answer"] .viewer-title small::after { content:' 現在は「答えを見る」モードです。'; }
-  body[data-app-mode="route"] .viewer-title small::after { content:' 現在は「ルート読込」モードです。'; }
+  body[data-app-mode="practice"] .viewer-title small::after { content:' 現在は「練習」モードです。'; }
+  body[data-app-mode="answer"] .viewer-title small::after { content:' 現在は「答え」モードです。'; }
+  body[data-app-mode="route"] .viewer-title small::after { content:' 現在は「ルート」モードです。'; }
   .status-panel { background:#ffffff; }
   .comparison-legend { display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:13px; font-weight:900; color:#334155; }
   .legend-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border:1px solid #e2e8f0; border-radius:999px; background:white; }
@@ -235,15 +235,128 @@
   .map-bike-speed > div:first-child { font-weight:850; color:#7f1d1d; }
   .map-bike-note { font-size:12px; color:#7f1d1d; line-height:1.55; }
 
+  .quick-mode-bar {
+    max-width:1280px;
+    margin:0 auto 14px;
+    padding:0 20px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+  }
+  .quick-mode-card {
+    min-height:70px;
+    border-radius:18px;
+    border:1px solid #cbd5e1;
+    background:rgba(255,255,255,.92);
+    box-shadow:var(--shadow-soft);
+    display:grid;
+    grid-template-columns:auto 1fr;
+    grid-template-areas:"num title" "num text";
+    align-items:center;
+    column-gap:10px;
+    text-align:left;
+    padding:12px 14px;
+  }
+  .quick-mode-card:hover { box-shadow:0 10px 22px rgba(15,23,42,.12); }
+  .quick-mode-card.active {
+    background:#0f172a;
+    color:white;
+    border-color:#0f172a;
+  }
+  .quick-mode-number {
+    grid-area:num;
+    width:34px;
+    height:34px;
+    border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:950;
+    background:#e0f2fe;
+    color:#0369a1;
+  }
+  .quick-mode-card.active .quick-mode-number { background:white; color:#0f172a; }
+  .quick-mode-card strong { grid-area:title; font-size:15px; line-height:1.15; }
+  .quick-mode-card small { grid-area:text; font-size:12px; color:var(--muted); font-weight:850; }
+  .quick-mode-card.active small { color:#cbd5e1; }
+  .map-guide {
+    display:grid;
+    grid-template-columns:auto auto 1fr;
+    gap:8px;
+    align-items:center;
+    margin:0 2px 10px;
+    padding:10px 12px;
+    border-radius:16px;
+    border:1px solid #dbeafe;
+    background:linear-gradient(180deg,#eff6ff 0%,#ffffff 100%);
+    color:#1e3a8a;
+    font-size:13px;
+    line-height:1.45;
+  }
+  .map-guide > div {
+    padding:3px 8px;
+    border-radius:999px;
+    background:#dbeafe;
+    color:#1d4ed8;
+    font-size:11px;
+    font-weight:950;
+    white-space:nowrap;
+  }
+  .map-guide strong { font-size:14px; font-weight:950; white-space:nowrap; }
+  .map-guide span { color:#334155; font-weight:750; }
+  .side .control-section { box-shadow:0 5px 14px rgba(15,23,42,.05); }
+  .control-section.status-panel { border-color:#bfdbfe; background:#ffffff; }
+  .control-section.status-panel .status { background:#f8fafc; border-color:#e2e8f0; }
+  .app-panel-answer { border-color:#fecaca; background:#fff7f7; }
+  .app-panel-route { border-color:#bbf7d0; background:#f0fdf4; }
+  .app-panel-practice { border-color:#bfdbfe; }
+  .mode-switch-panel { border-width:2px; }
+  .mode-switch-panel .section-label::before { content:'🧭 '; }
+  .primary-panel .section-label::before { content:'🏍️ '; }
+  .status-panel .section-label::before { content:'📌 '; }
+  .app-panel-practice .section-label::before { content:'✍️ '; }
+  .app-panel-answer .section-label::before { content:'🔍 '; }
+  .app-panel-route .section-label::before { content:'📄 '; }
+  button.blue, button.accent, button.primary { box-shadow:0 8px 18px rgba(15,23,42,.14); }
+  .map-bike-controls { border-width:2px; }
+  .map-bike-head strong::before { content:'🏁 '; }
+
   @media (max-width:980px) {
     .app-header { grid-template-columns:1fr; padding-inline:14px; }
+    .quick-mode-bar { padding-inline:14px; }
     .app-main { grid-template-columns:1fr; padding-inline:14px; }
     .side { position:static; }
     .viewer-top { flex-direction:column; align-items:flex-start; }
     .quick-status { justify-content:flex-start; }
   }
   @media (max-width:560px) {
-    .app-header { padding-top:14px; }
+    .app-header { padding-top:12px; padding-bottom:8px; }
+    h1 { font-size:24px; }
+    .quick-mode-bar {
+      position:sticky;
+      top:0;
+      z-index:40;
+      grid-template-columns:repeat(3,1fr);
+      gap:6px;
+      padding:8px 10px;
+      margin-bottom:8px;
+      background:rgba(238,242,247,.94);
+      backdrop-filter:blur(8px);
+    }
+    .quick-mode-card {
+      min-height:58px;
+      border-radius:14px;
+      padding:8px 6px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      gap:2px;
+    }
+    .quick-mode-number { width:24px; height:24px; font-size:12px; }
+    .quick-mode-card strong { font-size:12px; }
+    .quick-mode-card small { display:none; }
     .app-main { gap:12px; }
     .viewer, .side { padding:10px; }
     .card { border-radius:18px; }
@@ -258,6 +371,8 @@
     .sub { font-size:13px; }
     .quick-status { gap:4px; }
     .pill { font-size:11px; min-height:24px; padding:3px 7px; }
+    .map-guide { grid-template-columns:1fr; gap:4px; font-size:12px; padding:9px 10px; }
+    .map-guide > div { width:max-content; }
     .map-wrap { border-radius:14px; }
     .map-bike-controls { position:sticky; bottom:8px; z-index:20; margin-top:8px; padding:10px; border-radius:16px; }
     .map-bike-buttons { grid-template-columns:1fr 1fr; }
@@ -270,36 +385,72 @@
 
   }
 
+
+
+  /* simple UI overrides */
+  .simple-header { display:block; padding:12px 14px 6px; }
+  .simple-header h1 { margin:0; font-size:24px; }
+  .simple-header .eyebrow { margin:0 0 2px; font-size:12px; }
+  .simple-mode-bar { margin:0 auto 8px; gap:6px; }
+  .quick-mode-card { min-height:46px; border-radius:14px; padding:8px 10px; grid-template-areas:"num title"; }
+  .quick-mode-card small { display:none; }
+  .quick-mode-number { width:26px; height:26px; font-size:12px; }
+  .quick-mode-card strong { font-size:15px; }
+  .simple-viewer-top { padding:0 2px 8px; }
+  .viewer-title small, .quick-status, .map-guide, .side .mode-switch-panel, .help-card, .map-bike-note { display:none !important; }
+  .app-main { gap:12px; }
+  .viewer { padding:10px; }
+  .side { gap:8px; padding:10px; }
+  .control-section { padding:10px; gap:8px; border-radius:15px; }
+  .section-head { min-height:0; }
+  .section-label { font-size:14px; }
+  .status { padding:9px 10px; }
+  .big { font-size:18px; }
+  .hint { font-size:12px; line-height:1.45; margin-top:2px; }
+  select, button { min-height:42px; padding:9px 11px; border-radius:12px; }
+  .map-bike-controls { padding:10px; gap:8px; }
+  .map-bike-buttons button { min-height:46px; }
+  .mini { font-size:12px; line-height:1.4; }
+  @media (max-width:560px) {
+    .simple-header { padding:10px 10px 4px; }
+    .simple-header h1 { font-size:21px; }
+    .simple-mode-bar { position:sticky; top:0; z-index:30; padding:6px 10px; background:rgba(248,250,252,.96); backdrop-filter:blur(8px); }
+    .quick-mode-card { min-height:44px; border-radius:12px; padding:7px 8px; }
+    .app-main { padding-inline:10px; }
+    .viewer, .side { padding:8px; }
+    .control-section { padding:9px; }
+    .map-bike-controls { bottom:6px; }
+  }
+
 </style>
 </head>
 <body data-app-mode="practice">
-<header class="app-header">
+<header class="app-header simple-header">
   <div>
     <p class="eyebrow">大型二輪コース暗記ツール</p>
-    <h1>描いて覚えて、バイクで順序確認</h1>
-    <div class="sub">赤線を消した地図に走行ラインを描き、時系列再生で描いた順番を確認できます。保存したHTMLを開くだけで使えます。</div>
+    <h1>コース暗記</h1>
   </div>
-  <div class="header-note">地図上の黒い丸番号は「コース順」ではありません。赤い線と矢印の始点から終点までを暗記対象にしています。</div>
 </header>
+<nav class="quick-mode-bar simple-mode-bar" aria-label="操作モード">
+  <button type="button" class="quick-mode-card active" data-mode-target="practice"><span class="quick-mode-number">1</span><strong>練習</strong></button>
+  <button type="button" class="quick-mode-card" data-mode-target="answer"><span class="quick-mode-number">2</span><strong>答え</strong></button>
+  <button type="button" class="quick-mode-card" data-mode-target="route"><span class="quick-mode-number">3</span><strong>読込</strong></button>
+</nav>
 <main class="app-main">
   <section class="card viewer">
-    <div class="viewer-top">
+    <div class="viewer-top simple-viewer-top">
       <div class="viewer-title">
         <strong>コース図</strong>
-        <small>地図上をドラッグして線を描きます。青い発着点はドラッグで変更できます。</small>
       </div>
-      <div class="quick-status" aria-label="現在の固定設定">
-        <span class="pill">線幅 4px固定</span>
-        <span class="pill">描画フェード 3%</span>
-        <span class="pill">再生時は答え表示</span>
-        <span class="pill">答え確認で2台比較</span>
-      </div>
+    </div>
+      <strong id="mapGuideTitle">練習</strong>
+      <span id="mapGuideText">地図上をドラッグして、覚えている走行ラインを描きます。</span>
     </div>
     <div class="map-wrap" id="mapWrap" aria-label="大型二輪コース図">
       <img id="baseImg" alt="赤線を消した大型二輪コース図">
       <img id="routeOverlay" class="map-layer" alt="公式赤線">
       <canvas id="drawCanvas" aria-label="走行ラインをなぞるキャンバス"></canvas>
-      <canvas id="answerPathCanvas" aria-label="答えルート読込中の確認表示"></canvas>
+      <canvas id="answerPathCanvas" aria-label="答えルート中の確認表示"></canvas>
       <div id="replayBike" class="replay-bike" aria-hidden="true">
         <svg viewBox="0 0 64 40" role="img" focusable="false">
           <circle cx="15" cy="29" r="8" fill="#111827"/>
@@ -324,7 +475,7 @@
           <path d="M29 14 L35 23" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/>
         </svg>
       </div>
-      <div id="startMarker" class="marker" style="left:82.2%; top:63.0%;" role="button" aria-label="発着点。ドラッグして位置を変更できます" title="発着点：ドラッグで変更"><div class="dot"></div><span>発着点</span></div>
+      <div id="startMarker" class="marker" style="left:82.2%; top:63.0%;" aria-label="発着点。メモファイルで指定されます" title="発着点：メモ指定"><div class="dot"></div><span>発着点</span></div>
     </div>
     <div class="map-bike-controls" aria-label="答え走行操作">
       <div class="map-bike-head">
@@ -332,16 +483,15 @@
         <span id="answerBikeMiniStatus" class="mini-status">停止中</span>
       </div>
       <div class="map-bike-buttons">
-        <button id="answerBikePlayPauseBtn" class="accent">答え走行 再生</button>
+        <button id="answerBikePlayPauseBtn" class="accent">再生</button>
         <button id="answerBikeEndBtn" class="ghost">終了</button>
       </div>
       <button id="answerLineToggleBtn" class="ghost full" aria-pressed="true">赤線OFF</button>
       <div class="map-bike-speed">
-        <div>答え速度</div>
+        <div>速度</div>
         <input id="answerBikeSpeedSliderMap" type="range" min="25" max="300" value="100">
         <div id="answerBikeSpeedValMap">1.0x</div>
       </div>
-      <div class="map-bike-note">答え確認時は、赤線ルートのバイクに加えて、書いた線がある場合は自分の線のバイクも同時に走ります。赤線ON/OFFは走行中も切替できます。</div>
     </div>
   </section>
 
@@ -349,14 +499,13 @@
     <section class="control-section mode-switch-panel" aria-label="操作モード">
       <div class="section-head">
         <div class="section-label">操作モード</div>
-        <div class="section-help">使う機能だけ表示</div>
       </div>
       <div class="app-mode-tabs" role="tablist" aria-label="操作モード切替">
-        <button id="memoryBtn" class="active" type="button">練習する<span>描く・リセット</span></button>
-        <button id="answerBtn" type="button">答えを見る<span>2台で比較</span></button>
-        <button id="routeModeBtn" type="button">ルート読込<span>メモファイル</span></button>
+        <button id="memoryBtn" class="active" type="button">練習</button>
+        <button id="answerBtn" type="button">答え</button>
+        <button id="routeModeBtn" type="button">読込</button>
       </div>
-      <div id="appModeHint" class="app-mode-hint">赤線なしの地図に、自分の走行ラインを描くモードです。</div>
+      <div id="appModeHint" class="app-mode-hint" hidden></div>
     </section>
 
     <section class="control-section primary-panel" aria-label="コース選択">
@@ -367,7 +516,7 @@
         <option value="course1">大型二輪 1号コース</option>
         <option value="course2">大型二輪 2号コース</option>
       </select>
-      <button id="swapBtn" class="ghost full">もう一方のコースへ</button>
+      <button id="swapBtn" class="ghost full">コース切替</button>
     </section>
 
     <section class="control-section status-panel" aria-label="現在の状態">
@@ -375,109 +524,70 @@
         <div class="section-label">状態</div>
       </div>
       <div class="status" id="statusBox">
-        <div class="big" id="statusTitle">暗記モード</div>
+        <div class="big" id="statusTitle">練習</div>
         <div class="hint" id="statusHint">赤線を消した地図に、始点から終点まで自分でラインをなぞってください。</div>
       </div>
     </section>
 
     <section class="control-section app-panel app-panel-practice" aria-label="練習操作">
       <div class="section-head">
-        <div class="section-label">練習する</div>
-        <div class="section-help">描く・赤線ヒント・リセット</div>
+        <div class="section-label">練習</div>
       </div>
-      <button id="showAnswerBtn" class="blue full">赤線ヒント ON/OFF</button>
+      <button id="showAnswerBtn" class="blue full">赤線ヒント</button>
       <div class="slider-row">
-        <div>答え透過</div>
+        <div>赤線</div>
         <input id="opacitySlider" type="range" min="0" max="100" value="0">
         <div id="opacityVal">0%</div>
       </div>
-      <button id="clearBtn" class="ghost full">書いた線をリセット</button>
+      <button id="clearBtn" class="ghost full">線をリセット</button>
     </section>
 
     <section class="control-section replay-panel app-panel app-panel-practice" aria-label="時系列再生">
       <div class="section-head">
-        <div class="section-label">自分の順番を見る</div>
-        <div class="section-help">描いた順にバイク走行</div>
+        <div class="section-label">自分再生</div>
       </div>
       <div class="row nowrap">
-        <button id="replayBtn" class="blue">自分のバイクを再生</button>
+        <button id="replayBtn" class="blue">自分を再生</button>
         <button id="replayStopBtn" class="ghost">停止</button>
       </div>
       <div class="slider-row">
-        <div>再生位置</div>
+        <div>位置</div>
         <input id="replaySlider" type="range" min="0" max="1000" value="1000">
         <div id="replayTimeVal">-</div>
       </div>
       <div class="slider-row">
-        <div>再生速度</div>
+        <div>速度</div>
         <input id="replaySpeedSlider" type="range" min="25" max="300" value="100">
         <div id="replaySpeedVal">1.0x</div>
       </div>
     </section>
 
-    <section class="control-section app-panel app-panel-answer" aria-label="答えを見る">
+    <section class="control-section app-panel app-panel-answer" aria-label="答え">
       <div class="section-head">
-        <div class="section-label">答えを見る</div>
-        <div class="section-help">正解と自分を比較</div>
+        <div class="section-label">答え</div>
       </div>
       <div class="comparison-legend" aria-label="バイク凡例">
-        <span class="legend-pill"><span class="legend-dot answer"></span>正解バイク</span>
-        <span class="legend-pill"><span class="legend-dot user"></span>自分のバイク</span>
+        <span class="legend-pill"><span class="legend-dot answer"></span>正解</span>
+        <span class="legend-pill"><span class="legend-dot user"></span>自分</span>
       </div>
       <div class="slider-row">
-        <div>答え速度</div>
+        <div>速度</div>
         <input id="answerBikeSpeedSlider" type="range" min="25" max="300" value="100">
         <div id="answerBikeSpeedVal">1.0x</div>
       </div>
-      <div class="mini">再生・一時停止・終了・赤線ON/OFFは、コース図のすぐ下にある「答え走行」パネルから操作します。書いた線がある場合は2台で比較再生します。</div>
     </section>
 
-    <section class="control-section app-panel app-panel-route" aria-label="答えルート読込">
+    <section class="control-section app-panel app-panel-route" aria-label="答えルート">
       <div class="section-head">
-        <div class="section-label">ルート読込</div>
-        <div class="section-help">メモファイルから反映</div>
+        <div class="section-label">ルート</div>
       </div>
       <input id="routeMemoFileInput" type="file" accept=".json,.txt,application/json,text/plain" hidden>
-      <button id="loadRouteMemoBtn" class="blue full">メモファイルを選んで読み込む</button>
-      <button id="fetchRouteMemoBtn" class="ghost full">GitHub上のメモを再読込</button>
-      <button id="exportRouteMemoBtn" class="ghost full">現在のルートをメモ出力</button>
+      <button id="loadRouteMemoBtn" class="blue full">メモ読込</button>
+      <button id="fetchRouteMemoBtn" class="ghost full">再読込</button>
+      <button id="exportRouteMemoBtn" class="ghost full">メモ出力</button>
       <div class="mini" id="routePointStatus">このコースの答えルートは未登録です。</div>
-      <div class="mini">
-        GitHubで使う場合は、リポジトリ直下に <strong>answer_route_memo.json</strong> を置くと自動読込できます。手元のファイルを使う場合は「メモファイルを選んで読み込む」を押してください。
-      </div>
     </section>
-
-    <section class="control-section app-panel app-panel-practice app-panel-route" aria-label="発着点設定">
-      <div class="section-head">
-        <div class="section-label">発着点</div>
-        <div class="section-help">青いマーカーをドラッグ</div>
-      </div>
-      <button id="resetStartMarkerBtn" class="ghost full">発着点を初期位置へ戻す</button>
-    </section>
-
-    <details class="help-card" open>
-      <summary>使い方</summary>
-      <div class="notes">
-        <ul>
-          <li><strong>練習する</strong>: 赤線なしの地図に走行ラインを描く。必要なときだけ赤線ヒントをONにする。</li>
-          <li><strong>答えを見る</strong>: 登録済みの正解ルートを走るバイクと、自分で書いた線を走るバイクを比較する。</li>
-          <li><strong>ルート読込</strong>: メモファイルから正解ルートを読み込む。読み込んだルートを使って答え確認でバイクを走らせる。</li>
-          <li><strong>発着点</strong>: 常に表示。青い発着点マーカーはドラッグして位置を変更できる。</li>
-        </ul>
-      </div>
-    </details>
-    <details class="help-card">
-      <summary>暗記の区切り方</summary>
-      <div class="notes" id="memoText"></div>
-    </details>
-    <div class="mini">
-      操作ショートカット
-      <div class="shortcut-row">
-        <span><span class="kbd">A</span> 赤線ON/OFF</span>
-        <span><span class="kbd">C</span> リセット</span>
-        <span><span class="kbd">R</span> 自分の順番再生</span>
-      </div>
-    </div>
+    <div id="memoText" hidden></div>
   </aside>
 </main>
 <script>
@@ -530,7 +640,7 @@ const DEFAULT_START_MARKER_POSITIONS = {
 const ANSWER_BIKE_ROUTE_PERCENT = { course1: [], course2: [] };
 const ANSWER_BIKE_SPEED_PX_PER_SEC = 360;
 
-const START_MARKER_STORAGE_KEY = 'nirinCourseStartMarkerPositions.v1';
+const START_MARKER_STORAGE_KEY = 'nirinCourseStartMarkerPositions.fromMemo.v2';
 const ANSWER_ROUTE_STORAGE_KEY = 'nirinCourseAnswerBikeRoutes.v2';
 const ANSWER_BIKE_SPEED_STORAGE_KEY = 'nirinCourseAnswerBikeSpeedPercent.v1';
 const ANSWER_ROUTE_MEMO_URL = 'answer_route_memo.json';
@@ -565,6 +675,8 @@ const buttons = {
 };
 const routeModeBtn = document.getElementById('routeModeBtn');
 const appModeHint = document.getElementById('appModeHint');
+const mapGuideTitle = document.getElementById('mapGuideTitle');
+const mapGuideText = document.getElementById('mapGuideText');
 let currentAppMode = 'practice';
 const routeMemoFileInput = document.getElementById('routeMemoFileInput');
 const loadRouteMemoBtn = document.getElementById('loadRouteMemoBtn');
@@ -585,14 +697,25 @@ const routeDataBox = document.getElementById('routeDataBox');
 function updateAppModeUi() {
   document.body.dataset.appMode = currentAppMode;
   const hints = {
-    practice: '赤線なしの地図に、自分の走行ラインを描くモードです。赤線ヒントと自分の順番再生だけを表示します。',
-    answer: '登録済みの正解ルートと、自分で書いた線を2台のバイクで比較するモードです。',
-    route: '正解バイクが走るルートをメモファイルから読み込むモードです。'
+    practice: '線を描いて練習します。',
+    answer: '正解と自分を比較します。',
+    route: '正解が走るルートをメモファイルから読み込むモードです。'
   };
   if(appModeHint) appModeHint.textContent = hints[currentAppMode] || '';
+  const guideTitles = { practice:'練習', answer:'答え', route:'ルート' };
+  const guideTexts = {
+    practice:'線を描きます。',
+    answer:'コース図下の操作で、正解と自分を比較します。',
+    route:'メモを読み込みます。'
+  };
+  if(mapGuideTitle) mapGuideTitle.textContent = guideTitles[currentAppMode] || '';
+  if(mapGuideText) mapGuideText.textContent = guideTexts[currentAppMode] || '';
   if(buttons.memory) buttons.memory.classList.toggle('active', currentAppMode === 'practice');
   if(buttons.answer) buttons.answer.classList.toggle('active', currentAppMode === 'answer');
   if(routeModeBtn) routeModeBtn.classList.toggle('active', currentAppMode === 'route');
+  document.querySelectorAll('[data-mode-target]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.modeTarget === currentAppMode);
+  });
 }
 function switchAppMode(mode) {
   currentAppMode = mode;
@@ -605,7 +728,7 @@ function switchAppMode(mode) {
     updateView();
     statusTitle.textContent = answerForced ? '赤線ヒント表示中' : '練習モード';
     statusHint.textContent = answerForced
-      ? '赤線ヒントを見ながら練習できます。バイク比較を見たいときは「答えを見る」を選んでください。'
+      ? '赤線ヒントを見ながら練習できます。バイク比較を見たいときは「答え」を選んでください。'
       : '赤線なしの地図に、始点から終点まで自分でラインをなぞってください。';
   } else if(mode === 'answer') {
     stopReplay(true);
@@ -622,8 +745,8 @@ function switchAppMode(mode) {
     opacitySlider.value = 0;
     updateView();
     refreshAnswerRoutesFromStorage(false);
-    statusTitle.textContent = 'ルート読込モード';
-    statusHint.textContent = 'answer_route_memo.json、または手元のJSON/TXTメモから正解バイクが走る通過点を読み込みます。';
+    statusTitle.textContent = 'ルートモード';
+    statusHint.textContent = 'answer_route_memo.json、または手元のメモから正解ルートと発着点を読み込みます。';
   }
   updateAppModeUi();
 }
@@ -636,7 +759,7 @@ function togglePracticeAnswerHint() {
   updateView();
   statusTitle.textContent = answerForced ? '赤線ヒント表示中' : '練習モード';
   statusHint.textContent = answerForced
-    ? '公式赤線をヒントとして表示しています。バイク比較を見たいときは「答えを見る」を選んでください。'
+    ? '公式赤線をヒントとして表示しています。バイク比較を見たいときは「答え」を選んでください。'
     : '赤線なしの地図に戻しました。始点から終点まで自分でラインをなぞってください。';
   updateAppModeUi();
 }
@@ -684,11 +807,9 @@ function updateStartMarkerFromEvent(e, save=false) {
   if(save) saveStartMarkerPositions();
 }
 function resetStartMarkerPosition() {
-  startMarkerPositions[courseKey] = { ...DEFAULT_START_MARKER_POSITIONS[courseKey] };
   applyStartMarkerPosition();
-  saveStartMarkerPositions();
-  statusTitle.textContent = '発着点を初期化';
-  statusHint.textContent = '現在のコースの発着点を初期位置へ戻しました。青いマーカーはドラッグして再変更できます。';
+  statusTitle.textContent = '発着点はメモ指定';
+  statusHint.textContent = '発着点はメモファイルの start で固定します。変更する場合は answer_route_memo.json を編集して再読込してください。';
 }
 
 function normalizeRoutePoints(points) {
@@ -770,12 +891,14 @@ function drawAnswerRoutePreview(force=false) {
 function updateAnswerRouteStatus() {
   const saved = answerBikeRoutes[courseKey] || [];
   const draft = answerRouteDraft || [];
+  const start = startMarkerPositions[courseKey] || DEFAULT_START_MARKER_POSITIONS[courseKey] || { x:82.2, y:63.0 };
   if(answerRouteEditMode) {
-    if(routePointStatus) routePointStatus.textContent = '登録中: ' + draft.length + '点。赤線上を進行順にタップしてください。重なる場所は曲がらず、次に進む直線上の点を続けてタップします。';
+    if(routePointStatus) routePointStatus.textContent = '登録中: ' + draft.length + '点。赤線上を進行順にタップしてください。';
     if(routeEditBtn) routeEditBtn.textContent = '登録中止';
     mapWrap.classList.add('route-registering');
   } else {
-    if(routePointStatus) routePointStatus.textContent = saved.length >= 2 ? ('登録済み: ' + saved.length + '点。このルートで答え確認時にバイクが走行します。') : 'このコースの答えルートは未登録です。メモファイルを読み込んでください。';
+    const startText = '発着点 ' + Number(start.x).toFixed(1) + ',' + Number(start.y).toFixed(1);
+    if(routePointStatus) routePointStatus.textContent = saved.length >= 2 ? ('登録済み: ' + saved.length + '点 / ' + startText) : '未登録 / ' + startText;
     if(routeEditBtn) routeEditBtn.textContent = '登録開始';
     mapWrap.classList.remove('route-registering');
   }
@@ -794,7 +917,7 @@ function startAnswerRouteEdit() {
   answerRouteEditMode = true;
   updateAnswerRouteStatus();
   drawAnswerRoutePreview(true);
-  statusTitle.textContent = '答えルート読込中';
+  statusTitle.textContent = '答えルート中';
   statusHint.textContent = '登録中は地図をタップすると緑の点が追加されます。ドラッグではなく、曲がり角や交差の手前・直進先を順番にタップしてください。';
 }
 function cancelAnswerRouteEdit() {
@@ -898,25 +1021,100 @@ function routeKeyFromLabel(label) {
   if(s === 'course2' || s === '2' || s.includes('2号')) return 'course2';
   return null;
 }
+
+function normalizeStartPoint(point) {
+  if(!point) return null;
+  let x, y;
+  if(Array.isArray(point)) {
+    x = Number(point[0]);
+    y = Number(point[1]);
+  } else {
+    x = Number(point.x);
+    y = Number(point.y);
+  }
+  if(!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
+}
+function startPointFromSource(source, key) {
+  if(!source) return null;
+  const altKey = key === 'course1' ? ['course1','1号','1'] : ['course2','2号','2'];
+  for(const k of altKey) {
+    const item = source[k];
+    if(!item) continue;
+    if(Array.isArray(item)) continue;
+    const p = normalizeStartPoint(item.start || item.startPoint || item.start_marker || item.startMarker || item.hatchaku || item['発着点']);
+    if(p) return p;
+  }
+  return null;
+}
+function extractJsonRoutesAndStarts(parsed) {
+  const routeSource = parsed && parsed.routes ? parsed.routes : parsed;
+  const startSource = parsed && (parsed.starts || parsed.start || parsed.startMarkers || parsed.start_positions || parsed.startPositions || parsed['発着点']);
+  const routes = { course1: [], course2: [] };
+  const starts = { course1: null, course2: null };
+  for(const key of ['course1','course2']) {
+    const labels = key === 'course1' ? ['course1','1号','1'] : ['course2','2号','2'];
+    let rawRoute = [];
+    for(const label of labels) {
+      const item = routeSource && routeSource[label];
+      if(Array.isArray(item)) { rawRoute = item; break; }
+      if(item && Array.isArray(item.route)) { rawRoute = item.route; break; }
+      if(item && Array.isArray(item.points)) { rawRoute = item.points; break; }
+    }
+    routes[key] = normalizeRoutePoints(rawRoute);
+    let start = null;
+    if(startSource) {
+      for(const label of labels) {
+        start = normalizeStartPoint(startSource[label]);
+        if(start) break;
+      }
+    }
+    if(!start) start = startPointFromSource(routeSource, key);
+    if(!start && routes[key].length >= 1) start = normalizeStartPoint(routes[key][0]);
+    starts[key] = start;
+  }
+  return { routes, starts };
+}
+function parseStartLine(line, currentKey) {
+  const s = String(line || '').trim();
+  const direct = s.match(/^(?:start|starts|startpoint|start_point|startmarker|start_marker|hatchaku|発着点)\s*(?:[-_ ]?)(course[12]|[12]|[１２]号|[12]号)?\s*[:：]\s*(.+)$/i);
+  if(direct) {
+    const key = direct[1] ? routeKeyFromLabel(direct[1]) : currentKey;
+    const nums = direct[2].match(/-?\d+(?:\.\d+)?/g);
+    if(key && nums && nums.length >= 2) return { key, point:{ x:Number(nums[0]), y:Number(nums[1]) } };
+  }
+  const suffix = s.match(/^(course[12]|[12]|[１２]号|[12]号)\s*(?:[-_ ]?)(?:start|starts|startpoint|start_point|startmarker|start_marker|hatchaku|発着点)\s*[:：]\s*(.+)$/i);
+  if(suffix) {
+    const key = routeKeyFromLabel(suffix[1]);
+    const nums = suffix[2].match(/-?\d+(?:\.\d+)?/g);
+    if(key && nums && nums.length >= 2) return { key, point:{ x:Number(nums[0]), y:Number(nums[1]) } };
+  }
+  return null;
+}
+
 function parseAnswerRouteMemo(text) {
   const rawText = String(text || '').replace(/^﻿/, '').trim();
   if(!rawText) throw new Error('empty');
   try {
     const parsed = JSON.parse(rawText);
-    const source = parsed && parsed.routes ? parsed.routes : parsed;
-    const routes = {
-      course1: normalizeRoutePoints(source.course1 || source['1号'] || source['1'] || []),
-      course2: normalizeRoutePoints(source.course2 || source['2号'] || source['2'] || [])
-    };
-    return { routes, explicit:true };
+    const extracted = extractJsonRoutesAndStarts(parsed);
+    return { routes: extracted.routes, starts: extracted.starts, explicit:true };
   } catch(_) {}
 
   const routes = { course1: [], course2: [] };
+  const starts = { course1: null, course2: null };
   let currentKey = null;
   let explicit = false;
   for(const rawLine of rawText.split(/\r?\n/)) {
     let line = rawLine.replace(/#.*/, '').replace(/\/\/.*/, '').trim();
     if(!line) continue;
+
+    const startLine = parseStartLine(line, currentKey);
+    if(startLine) {
+      starts[startLine.key] = normalizeStartPoint(startLine.point);
+      explicit = true;
+      continue;
+    }
 
     const headerOnly = line.match(/^(course[12]|[12]|[１２]号|[12]号)\s*[:：]?$/i);
     if(headerOnly) {
@@ -940,7 +1138,10 @@ function parseAnswerRouteMemo(text) {
   }
   routes.course1 = normalizeRoutePoints(routes.course1);
   routes.course2 = normalizeRoutePoints(routes.course2);
-  return { routes, explicit };
+  for(const key of ['course1','course2']) {
+    if(!starts[key] && routes[key].length >= 1) starts[key] = normalizeStartPoint(routes[key][0]);
+  }
+  return { routes, starts, explicit };
 }
 function applyAnswerRouteMemoText(text, sourceName='メモファイル', showMessage=true) {
   const parsed = parseAnswerRouteMemo(text);
@@ -948,20 +1149,33 @@ function applyAnswerRouteMemoText(text, sourceName='メモファイル', showMes
     course1: normalizeRoutePoints(parsed.routes.course1),
     course2: normalizeRoutePoints(parsed.routes.course2)
   };
+  const nextStarts = {
+    course1: normalizeStartPoint(parsed.starts && parsed.starts.course1),
+    course2: normalizeStartPoint(parsed.starts && parsed.starts.course2)
+  };
   const changed = [];
+  const startChanged = [];
   for(const key of ['course1','course2']) {
     if(next[key].length >= 2) {
       answerBikeRoutes[key] = next[key];
       changed.push(key);
     }
+    const start = nextStarts[key] || (next[key].length >= 1 ? normalizeStartPoint(next[key][0]) : null);
+    if(start) {
+      startMarkerPositions[key] = start;
+      startChanged.push(key);
+    }
   }
-  if(!changed.length) throw new Error('no_routes');
+  if(!changed.length && !startChanged.length) throw new Error('no_routes');
   saveAnswerBikeRoutes();
+  saveStartMarkerPositions();
+  applyStartMarkerPosition();
   cancelAnswerRouteEdit();
   updateAnswerRouteStatus();
   if(showMessage) {
+    const courseText = Array.from(new Set([...changed, ...startChanged])).map(k => k === 'course1' ? '1号' : '2号').join('・');
     statusTitle.textContent = 'メモファイルを読み込みました';
-    statusHint.textContent = sourceName + ' から ' + changed.map(k => k === 'course1' ? '1号' : '2号').join('・') + 'コースの答えルートを反映しました。答えを見るモードで再生できます。';
+    statusHint.textContent = sourceName + ' から ' + courseText + 'コースのルートと発着点を反映しました。';
   }
 }
 async function loadRouteMemoFromFile(file) {
@@ -971,7 +1185,7 @@ async function loadRouteMemoFromFile(file) {
     applyAnswerRouteMemoText(text, file.name || 'メモファイル', true);
   } catch(err) {
     statusTitle.textContent = '読み込み失敗';
-    statusHint.textContent = 'メモファイルの形式が正しくありません。JSON形式、または「course1:」/「course2:」の下に x,y を並べる形式にしてください。';
+    statusHint.textContent = 'メモファイルの形式が正しくありません。JSON形式、または course1_start / course2_start と course1 / course2 の座標を指定してください。';
   } finally {
     if(routeMemoFileInput) routeMemoFileInput.value = '';
   }
@@ -982,7 +1196,7 @@ async function fetchBundledRouteMemo(showMessage=false) {
     if(!res.ok) {
       if(showMessage) {
         statusTitle.textContent = 'メモファイルが見つかりません';
-        statusHint.textContent = 'GitHubリポジトリ直下に answer_route_memo.json を置くか、「メモファイルを選んで読み込む」から手元のファイルを選んでください。';
+        statusHint.textContent = 'GitHubリポジトリ直下に answer_route_memo.json を置くか、「メモ読込」から手元のファイルを選んでください。';
       }
       return;
     }
@@ -991,7 +1205,7 @@ async function fetchBundledRouteMemo(showMessage=false) {
   } catch(_) {
     if(showMessage) {
       statusTitle.textContent = 'メモ読込に失敗';
-      statusHint.textContent = 'ローカルファイルとして開いている場合、自動読込は使えません。「メモファイルを選んで読み込む」を使ってください。';
+      statusHint.textContent = 'ローカルファイルとして開いている場合、自動読込は使えません。「メモ読込」を使ってください。';
     }
   }
 }
@@ -999,10 +1213,13 @@ function buildAnswerRouteMemoText() {
   const lines = [
     '# 二輪コース 答えルートメモ',
     '# 座標はコース図の左上を 0,0、右下を 100,100 とした割合です。',
-    '# 各行に x,y を1点ずつ書き、発着点から走行順に並べます。',
+    '# course1_start / course2_start で発着点を固定します。',
+    '# ルートの各行は x,y を1点ずつ、発着点から走行順に並べます。',
     ''
   ];
   for(const key of ['course1','course2']) {
+    const start = startMarkerPositions[key] || DEFAULT_START_MARKER_POSITIONS[key];
+    lines.push(key + '_start: ' + Number(start.x).toFixed(2) + ',' + Number(start.y).toFixed(2));
     lines.push(key + ':');
     const pts = answerBikeRoutes[key] || [];
     if(!pts.length) lines.push('# 未登録');
@@ -1079,7 +1296,7 @@ function updateView() {
   updateAnswerLineToggleUi();
   updateAppModeUi();
   if(displayMode === 'memory') {
-    statusTitle.textContent = '暗記モード';
+    statusTitle.textContent = '練習';
     statusHint.textContent = '赤線を消した地図に、赤線と矢印の流れを思い出して始点から終点までなぞります。';
   } else {
     statusTitle.textContent = '答え確認';
@@ -1300,7 +1517,7 @@ function updateAnswerBikeControlUi() {
   const finished = answerBikeFinished;
   const hasRegisteredRoute = (answerBikeRoutes[courseKey] || []).length >= 2 || (ANSWER_BIKE_ROUTE_PERCENT[courseKey] || []).length >= 2;
   if(answerBikePlayPauseBtn) {
-    answerBikePlayPauseBtn.textContent = running ? '一時停止' : (paused ? '再開' : (finished ? 'もう一度再生' : '答え走行 再生'));
+    answerBikePlayPauseBtn.textContent = running ? '一時停止' : (paused ? '再開' : (finished ? 'もう一度再生' : '再生'));
     answerBikePlayPauseBtn.classList.toggle('accent', !running);
     answerBikePlayPauseBtn.classList.toggle('blue', running);
   }
@@ -1413,7 +1630,7 @@ function startAnswerBike() {
   if(!answerBikeRouteCache) {
     answerUserBikeRouteCache = null;
     statusTitle.textContent = '答えルート未登録';
-    statusHint.textContent = '先にルート読込モードでメモファイルを読み込んでください。';
+    statusHint.textContent = '先にルートモードでメモファイルを読み込んでください。';
     hideReplayBike();
     updateAnswerBikeControlUi();
     return;
@@ -1734,10 +1951,14 @@ if(routeExportBtn) routeExportBtn.addEventListener('click', exportAnswerRoutes);
 if(routeImportBtn) routeImportBtn.addEventListener('click', importAnswerRoutes);
 
 courseSelect.addEventListener('change', e => { stopAnswerBike(); stopReplay(true); courseKey = e.target.value; setImages(); updateView(); });
+document.querySelectorAll('[data-mode-target]').forEach(btn => {
+  btn.addEventListener('click', () => switchAppMode(btn.dataset.modeTarget));
+});
 buttons.memory.addEventListener('click', () => switchAppMode('practice'));
 buttons.answer.addEventListener('click', () => switchAppMode('answer'));
 if(routeModeBtn) routeModeBtn.addEventListener('click', () => switchAppMode('route'));
-document.getElementById('resetStartMarkerBtn').addEventListener('click', resetStartMarkerPosition);
+const resetStartMarkerBtn = document.getElementById('resetStartMarkerBtn');
+if(resetStartMarkerBtn) resetStartMarkerBtn.addEventListener('click', resetStartMarkerPosition);
 opacitySlider.addEventListener('input', () => {
   const bikeActive = isAnswerBikeSessionActive();
   if(!bikeActive) stopAnswerBike();
@@ -1774,32 +1995,7 @@ document.getElementById('clearBtn').addEventListener('click', () => clearDrawing
 document.getElementById('swapBtn').addEventListener('click', () => { stopAnswerBike(); stopReplay(true); courseKey = courseKey === 'course1' ? 'course2' : 'course1'; setImages(); updateView(); });
 document.getElementById('showAnswerBtn').addEventListener('click', () => togglePracticeAnswerHint());
 
-startMarker.addEventListener('pointerdown', (e) => {
-  if(answerRouteEditMode) return;
-  e.preventDefault();
-  e.stopPropagation();
-  stopReplay(true);
-  isDraggingStartMarker = true;
-  startMarker.classList.add('dragging');
-  startMarker.setPointerCapture(e.pointerId);
-  updateStartMarkerFromEvent(e, false);
-});
-startMarker.addEventListener('pointermove', (e) => {
-  if(!isDraggingStartMarker) return;
-  e.preventDefault();
-  e.stopPropagation();
-  updateStartMarkerFromEvent(e, false);
-});
-function finishStartMarkerDrag(e) {
-  if(!isDraggingStartMarker) return;
-  e.preventDefault();
-  e.stopPropagation();
-  isDraggingStartMarker = false;
-  startMarker.classList.remove('dragging');
-  updateStartMarkerFromEvent(e, true);
-}
-startMarker.addEventListener('pointerup', finishStartMarkerDrag);
-startMarker.addEventListener('pointercancel', finishStartMarkerDrag);
+// 発着点はメモファイルで固定するため、画面上ではドラッグ編集しない。
 drawCanvas.addEventListener('pointerdown', beginDraw);
 drawCanvas.addEventListener('pointermove', moveDraw);
 drawCanvas.addEventListener('pointerup', endDraw);
