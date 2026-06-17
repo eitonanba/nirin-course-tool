@@ -141,7 +141,7 @@
   body[data-app-mode="route"] .app-panel-route { display:grid; }
   body[data-app-mode="practice"] .viewer-title small::after { content:' 現在は「練習する」モードです。'; }
   body[data-app-mode="answer"] .viewer-title small::after { content:' 現在は「答えを見る」モードです。'; }
-  body[data-app-mode="route"] .viewer-title small::after { content:' 現在は「ルート登録」モードです。'; }
+  body[data-app-mode="route"] .viewer-title small::after { content:' 現在は「ルート読込」モードです。'; }
   .status-panel { background:#ffffff; }
   .comparison-legend { display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:13px; font-weight:900; color:#334155; }
   .legend-pill { display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border:1px solid #e2e8f0; border-radius:999px; background:white; }
@@ -299,7 +299,7 @@
       <img id="baseImg" alt="赤線を消した大型二輪コース図">
       <img id="routeOverlay" class="map-layer" alt="公式赤線">
       <canvas id="drawCanvas" aria-label="走行ラインをなぞるキャンバス"></canvas>
-      <canvas id="answerPathCanvas" aria-label="答えルート登録中の確認表示"></canvas>
+      <canvas id="answerPathCanvas" aria-label="答えルート読込中の確認表示"></canvas>
       <div id="replayBike" class="replay-bike" aria-hidden="true">
         <svg viewBox="0 0 64 40" role="img" focusable="false">
           <circle cx="15" cy="29" r="8" fill="#111827"/>
@@ -354,7 +354,7 @@
       <div class="app-mode-tabs" role="tablist" aria-label="操作モード切替">
         <button id="memoryBtn" class="active" type="button">練習する<span>描く・リセット</span></button>
         <button id="answerBtn" type="button">答えを見る<span>2台で比較</span></button>
-        <button id="routeModeBtn" type="button">ルート登録<span>別タブで編集</span></button>
+        <button id="routeModeBtn" type="button">ルート読込<span>メモファイル</span></button>
       </div>
       <div id="appModeHint" class="app-mode-hint">赤線なしの地図に、自分の走行ラインを描くモードです。</div>
     </section>
@@ -432,14 +432,19 @@
       <div class="mini">再生・一時停止・終了・赤線ON/OFFは、コース図のすぐ下にある「答え走行」パネルから操作します。書いた線がある場合は2台で比較再生します。</div>
     </section>
 
-    <section class="control-section app-panel app-panel-route" aria-label="答えルート登録">
+    <section class="control-section app-panel app-panel-route" aria-label="答えルート読込">
       <div class="section-head">
-        <div class="section-label">ルート登録</div>
-        <div class="section-help">別タブで登録・修正</div>
+        <div class="section-label">ルート読込</div>
+        <div class="section-help">メモファイルから反映</div>
       </div>
-      <button id="openRouteEditorBtn" class="blue full">答えルート登録を別タブで開く</button>
-      <button id="refreshRouteStatusBtn" class="ghost full">登録状態を更新</button>
+      <input id="routeMemoFileInput" type="file" accept=".json,.txt,application/json,text/plain" hidden>
+      <button id="loadRouteMemoBtn" class="blue full">メモファイルを選んで読み込む</button>
+      <button id="fetchRouteMemoBtn" class="ghost full">GitHub上のメモを再読込</button>
+      <button id="exportRouteMemoBtn" class="ghost full">現在のルートをメモ出力</button>
       <div class="mini" id="routePointStatus">このコースの答えルートは未登録です。</div>
+      <div class="mini">
+        GitHubで使う場合は、リポジトリ直下に <strong>answer_route_memo.json</strong> を置くと自動読込できます。手元のファイルを使う場合は「メモファイルを選んで読み込む」を押してください。
+      </div>
     </section>
 
     <section class="control-section app-panel app-panel-practice app-panel-route" aria-label="発着点設定">
@@ -456,7 +461,7 @@
         <ul>
           <li><strong>練習する</strong>: 赤線なしの地図に走行ラインを描く。必要なときだけ赤線ヒントをONにする。</li>
           <li><strong>答えを見る</strong>: 登録済みの正解ルートを走るバイクと、自分で書いた線を走るバイクを比較する。</li>
-          <li><strong>ルート登録</strong>: 別タブで赤線上に通過点を置いて保存する。保存後、メイン画面に戻ると答え確認でそのルートを再生する。</li>
+          <li><strong>ルート読込</strong>: メモファイルから正解ルートを読み込む。読み込んだルートを使って答え確認でバイクを走らせる。</li>
           <li><strong>発着点</strong>: 常に表示。青い発着点マーカーはドラッグして位置を変更できる。</li>
         </ul>
       </div>
@@ -528,6 +533,7 @@ const ANSWER_BIKE_SPEED_PX_PER_SEC = 360;
 const START_MARKER_STORAGE_KEY = 'nirinCourseStartMarkerPositions.v1';
 const ANSWER_ROUTE_STORAGE_KEY = 'nirinCourseAnswerBikeRoutes.v2';
 const ANSWER_BIKE_SPEED_STORAGE_KEY = 'nirinCourseAnswerBikeSpeedPercent.v1';
+const ANSWER_ROUTE_MEMO_URL = 'answer_route_memo.json';
 let startMarkerPositions = loadStartMarkerPositions();
 let answerBikeRoutes = loadAnswerBikeRoutes();
 let answerRouteEditMode = false;
@@ -560,6 +566,10 @@ const buttons = {
 const routeModeBtn = document.getElementById('routeModeBtn');
 const appModeHint = document.getElementById('appModeHint');
 let currentAppMode = 'practice';
+const routeMemoFileInput = document.getElementById('routeMemoFileInput');
+const loadRouteMemoBtn = document.getElementById('loadRouteMemoBtn');
+const fetchRouteMemoBtn = document.getElementById('fetchRouteMemoBtn');
+const exportRouteMemoBtn = document.getElementById('exportRouteMemoBtn');
 const openRouteEditorBtn = document.getElementById('openRouteEditorBtn');
 const refreshRouteStatusBtn = document.getElementById('refreshRouteStatusBtn');
 const routeEditBtn = document.getElementById('routeEditBtn');
@@ -577,7 +587,7 @@ function updateAppModeUi() {
   const hints = {
     practice: '赤線なしの地図に、自分の走行ラインを描くモードです。赤線ヒントと自分の順番再生だけを表示します。',
     answer: '登録済みの正解ルートと、自分で書いた線を2台のバイクで比較するモードです。',
-    route: '正解バイクが走るルートを別タブで登録・修正するモードです。'
+    route: '正解バイクが走るルートをメモファイルから読み込むモードです。'
   };
   if(appModeHint) appModeHint.textContent = hints[currentAppMode] || '';
   if(buttons.memory) buttons.memory.classList.toggle('active', currentAppMode === 'practice');
@@ -612,8 +622,8 @@ function switchAppMode(mode) {
     opacitySlider.value = 0;
     updateView();
     refreshAnswerRoutesFromStorage(false);
-    statusTitle.textContent = 'ルート登録モード';
-    statusHint.textContent = '「答えルート登録を別タブで開く」から、正解バイクが走る通過点を登録・修正します。';
+    statusTitle.textContent = 'ルート読込モード';
+    statusHint.textContent = 'answer_route_memo.json、または手元のJSON/TXTメモから正解バイクが走る通過点を読み込みます。';
   }
   updateAppModeUi();
 }
@@ -765,7 +775,7 @@ function updateAnswerRouteStatus() {
     if(routeEditBtn) routeEditBtn.textContent = '登録中止';
     mapWrap.classList.add('route-registering');
   } else {
-    if(routePointStatus) routePointStatus.textContent = saved.length >= 2 ? ('登録済み: ' + saved.length + '点。このルートで答え確認時にバイクが走行します。') : 'このコースの答えルートは未登録です。「答えルート登録を別タブで開く」から登録してください。';
+    if(routePointStatus) routePointStatus.textContent = saved.length >= 2 ? ('登録済み: ' + saved.length + '点。このルートで答え確認時にバイクが走行します。') : 'このコースの答えルートは未登録です。メモファイルを読み込んでください。';
     if(routeEditBtn) routeEditBtn.textContent = '登録開始';
     mapWrap.classList.remove('route-registering');
   }
@@ -784,7 +794,7 @@ function startAnswerRouteEdit() {
   answerRouteEditMode = true;
   updateAnswerRouteStatus();
   drawAnswerRoutePreview(true);
-  statusTitle.textContent = '答えルート登録中';
+  statusTitle.textContent = '答えルート読込中';
   statusHint.textContent = '登録中は地図をタップすると緑の点が追加されます。ドラッグではなく、曲がり角や交差の手前・直進先を順番にタップしてください。';
 }
 function cancelAnswerRouteEdit() {
@@ -881,6 +891,139 @@ function importAnswerRoutes() {
     statusTitle.textContent = '読み込み失敗';
     statusHint.textContent = 'ルートデータの形式が正しくありません。コピーしたJSON全体を貼り付けてください。';
   }
+}
+function routeKeyFromLabel(label) {
+  const s = String(label || '').trim().toLowerCase();
+  if(s === 'course1' || s === '1' || s.includes('1号')) return 'course1';
+  if(s === 'course2' || s === '2' || s.includes('2号')) return 'course2';
+  return null;
+}
+function parseAnswerRouteMemo(text) {
+  const rawText = String(text || '').replace(/^﻿/, '').trim();
+  if(!rawText) throw new Error('empty');
+  try {
+    const parsed = JSON.parse(rawText);
+    const source = parsed && parsed.routes ? parsed.routes : parsed;
+    const routes = {
+      course1: normalizeRoutePoints(source.course1 || source['1号'] || source['1'] || []),
+      course2: normalizeRoutePoints(source.course2 || source['2号'] || source['2'] || [])
+    };
+    return { routes, explicit:true };
+  } catch(_) {}
+
+  const routes = { course1: [], course2: [] };
+  let currentKey = null;
+  let explicit = false;
+  for(const rawLine of rawText.split(/\r?\n/)) {
+    let line = rawLine.replace(/#.*/, '').replace(/\/\/.*/, '').trim();
+    if(!line) continue;
+
+    const headerOnly = line.match(/^(course[12]|[12]|[１２]号|[12]号)\s*[:：]?$/i);
+    if(headerOnly) {
+      currentKey = routeKeyFromLabel(headerOnly[1]);
+      explicit = !!currentKey;
+      continue;
+    }
+    const headerWithData = line.match(/^(course[12]|[12]|[１２]号|[12]号)\s*[:：]\s*(.+)$/i);
+    if(headerWithData) {
+      currentKey = routeKeyFromLabel(headerWithData[1]);
+      explicit = !!currentKey;
+      line = headerWithData[2].trim();
+      if(!line) continue;
+    }
+    const key = currentKey || courseKey;
+    const nums = line.match(/-?\d+(?:\.\d+)?/g);
+    if(!key || !nums || nums.length < 2) continue;
+    for(let i=0; i + 1 < nums.length; i += 2) {
+      routes[key].push({ x:Number(nums[i]), y:Number(nums[i + 1]) });
+    }
+  }
+  routes.course1 = normalizeRoutePoints(routes.course1);
+  routes.course2 = normalizeRoutePoints(routes.course2);
+  return { routes, explicit };
+}
+function applyAnswerRouteMemoText(text, sourceName='メモファイル', showMessage=true) {
+  const parsed = parseAnswerRouteMemo(text);
+  const next = {
+    course1: normalizeRoutePoints(parsed.routes.course1),
+    course2: normalizeRoutePoints(parsed.routes.course2)
+  };
+  const changed = [];
+  for(const key of ['course1','course2']) {
+    if(next[key].length >= 2) {
+      answerBikeRoutes[key] = next[key];
+      changed.push(key);
+    }
+  }
+  if(!changed.length) throw new Error('no_routes');
+  saveAnswerBikeRoutes();
+  cancelAnswerRouteEdit();
+  updateAnswerRouteStatus();
+  if(showMessage) {
+    statusTitle.textContent = 'メモファイルを読み込みました';
+    statusHint.textContent = sourceName + ' から ' + changed.map(k => k === 'course1' ? '1号' : '2号').join('・') + 'コースの答えルートを反映しました。答えを見るモードで再生できます。';
+  }
+}
+async function loadRouteMemoFromFile(file) {
+  if(!file) return;
+  try {
+    const text = await file.text();
+    applyAnswerRouteMemoText(text, file.name || 'メモファイル', true);
+  } catch(err) {
+    statusTitle.textContent = '読み込み失敗';
+    statusHint.textContent = 'メモファイルの形式が正しくありません。JSON形式、または「course1:」/「course2:」の下に x,y を並べる形式にしてください。';
+  } finally {
+    if(routeMemoFileInput) routeMemoFileInput.value = '';
+  }
+}
+async function fetchBundledRouteMemo(showMessage=false) {
+  try {
+    const res = await fetch(ANSWER_ROUTE_MEMO_URL + '?ts=' + Date.now(), { cache:'no-store' });
+    if(!res.ok) {
+      if(showMessage) {
+        statusTitle.textContent = 'メモファイルが見つかりません';
+        statusHint.textContent = 'GitHubリポジトリ直下に answer_route_memo.json を置くか、「メモファイルを選んで読み込む」から手元のファイルを選んでください。';
+      }
+      return;
+    }
+    const text = await res.text();
+    applyAnswerRouteMemoText(text, ANSWER_ROUTE_MEMO_URL, showMessage);
+  } catch(_) {
+    if(showMessage) {
+      statusTitle.textContent = 'メモ読込に失敗';
+      statusHint.textContent = 'ローカルファイルとして開いている場合、自動読込は使えません。「メモファイルを選んで読み込む」を使ってください。';
+    }
+  }
+}
+function buildAnswerRouteMemoText() {
+  const lines = [
+    '# 二輪コース 答えルートメモ',
+    '# 座標はコース図の左上を 0,0、右下を 100,100 とした割合です。',
+    '# 各行に x,y を1点ずつ書き、発着点から走行順に並べます。',
+    ''
+  ];
+  for(const key of ['course1','course2']) {
+    lines.push(key + ':');
+    const pts = answerBikeRoutes[key] || [];
+    if(!pts.length) lines.push('# 未登録');
+    for(const p of pts) lines.push(Number(p.x).toFixed(2) + ',' + Number(p.y).toFixed(2));
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+function exportAnswerRouteMemoFile() {
+  const text = buildAnswerRouteMemoText();
+  const blob = new Blob([text], { type:'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'answer_route_memo.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  statusTitle.textContent = 'メモファイルを出力しました';
+  statusHint.textContent = '出力した answer_route_memo.txt を編集して読み込めます。GitHubで自動読込したい場合は answer_route_memo.json として置いてください。';
 }
 
 function current() { return DATA[courseKey]; }
@@ -1270,7 +1413,7 @@ function startAnswerBike() {
   if(!answerBikeRouteCache) {
     answerUserBikeRouteCache = null;
     statusTitle.textContent = '答えルート未登録';
-    statusHint.textContent = '先に「答えルート登録を別タブで開く」から公式赤線上を発着点から順番にタップして保存してください。';
+    statusHint.textContent = '先にルート読込モードでメモファイルを読み込んでください。';
     hideReplayBike();
     updateAnswerBikeControlUi();
     return;
@@ -1529,23 +1672,9 @@ function refreshAnswerRoutesFromStorage(showMessage=false) {
   if(showMessage) {
     const saved = answerBikeRoutes[courseKey] || [];
     statusTitle.textContent = '登録状態を更新';
-    statusHint.textContent = saved.length >= 2 ? ('現在のコースは ' + saved.length + '点の答えルートが登録されています。') : '現在のコースの答えルートは未登録です。別タブで登録してください。';
+    statusHint.textContent = saved.length >= 2 ? ('現在のコースは ' + saved.length + '点の答えルートが登録されています。') : '現在のコースの答えルートは未登録です。メモファイルを読み込んでください。';
   }
 }
-function openAnswerRouteEditor() {
-  stopAnswerBike();
-  stopReplay(true);
-  const url = 'answer_route_editor.html?course=' + encodeURIComponent(courseKey);
-  const win = window.open(url, '_blank', 'noopener');
-  if(win) {
-    statusTitle.textContent = '答えルート登録を開きました';
-    statusHint.textContent = '別タブで赤線上に通過点を置いて保存してください。保存後、この画面に戻ると登録状態が自動更新されます。';
-  } else {
-    statusTitle.textContent = '別タブを開けませんでした';
-    statusHint.textContent = 'ブラウザのポップアップ制限が考えられます。このボタンを長押しするか、answer_route_editor.html を直接開いてください。';
-  }
-}
-
 function setAnswerLineDuringBike(visible) {
   opacitySlider.value = visible ? 100 : 0;
   displayMode = 'answer';
@@ -1590,8 +1719,10 @@ function toggleAnswer() {
 }
 
 
-if(openRouteEditorBtn) openRouteEditorBtn.addEventListener('click', openAnswerRouteEditor);
-if(refreshRouteStatusBtn) refreshRouteStatusBtn.addEventListener('click', () => refreshAnswerRoutesFromStorage(true));
+if(loadRouteMemoBtn && routeMemoFileInput) loadRouteMemoBtn.addEventListener('click', () => routeMemoFileInput.click());
+if(routeMemoFileInput) routeMemoFileInput.addEventListener('change', () => loadRouteMemoFromFile(routeMemoFileInput.files && routeMemoFileInput.files[0]));
+if(fetchRouteMemoBtn) fetchRouteMemoBtn.addEventListener('click', () => fetchBundledRouteMemo(true));
+if(exportRouteMemoBtn) exportRouteMemoBtn.addEventListener('click', exportAnswerRouteMemoFile);
 if(routeEditBtn) routeEditBtn.addEventListener('click', () => {
   if(answerRouteEditMode) cancelAnswerRouteEdit();
   else startAnswerRouteEdit();
@@ -1693,6 +1824,7 @@ setImages();
 setBrushWidth();
 updateView();
 updateAppModeUi();
+fetchBundledRouteMemo(false);
 </script>
 </body>
 </html>
