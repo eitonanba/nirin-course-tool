@@ -231,8 +231,8 @@
   .map-bike-buttons button { min-height:50px; font-size:15px; }
   .map-bike-controls > button.full { min-height:46px; font-size:14px; }
   .map-bike-controls > button.full.active { background:var(--accent); color:white; border-color:var(--accent); }
-  .map-bike-speed { display:grid; grid-template-columns:82px 1fr 48px; gap:8px; align-items:center; font-size:13px; }
-  .map-bike-speed > div:first-child { font-weight:850; color:#7f1d1d; }
+  .map-bike-speed, .map-bike-progress { display:grid; grid-template-columns:82px 1fr 48px; gap:8px; align-items:center; font-size:13px; }
+  .map-bike-speed > div:first-child, .map-bike-progress > div:first-child { font-weight:850; color:#7f1d1d; }
   .map-bike-note { font-size:12px; color:#7f1d1d; line-height:1.55; }
 
   .quick-mode-bar {
@@ -377,7 +377,7 @@
     .map-bike-controls { position:sticky; bottom:8px; z-index:20; margin-top:8px; padding:10px; border-radius:16px; }
     .map-bike-buttons { grid-template-columns:1fr 1fr; }
     .map-bike-buttons button { min-height:54px; font-size:15px; }
-    .map-bike-speed { grid-template-columns:74px 1fr 44px; font-size:12px; }
+    .map-bike-speed, .map-bike-progress { grid-template-columns:74px 1fr 44px; font-size:12px; }
     .control-section { border-radius:16px; padding:10px; }
     .status { padding:10px; }
     .big { font-size:19px; }
@@ -485,6 +485,11 @@
       <div class="map-bike-buttons">
         <button id="answerBikePlayPauseBtn" class="accent">再生</button>
         <button id="answerBikeEndBtn" class="ghost">終了</button>
+      </div>
+      <div class="map-bike-progress">
+        <div>位置</div>
+        <input id="answerBikeProgressSliderMap" type="range" min="0" max="1000" value="0">
+        <div id="answerBikeProgressValMap">0%</div>
       </div>
       <button id="answerLineToggleBtn" class="ghost full" aria-pressed="true">赤線OFF</button>
       <div class="map-bike-speed">
@@ -656,6 +661,8 @@ const answerBikeSpeedSlider = document.getElementById('answerBikeSpeedSlider');
 const answerBikeSpeedVal = document.getElementById('answerBikeSpeedVal');
 const answerBikeSpeedSliderMap = document.getElementById('answerBikeSpeedSliderMap');
 const answerBikeSpeedValMap = document.getElementById('answerBikeSpeedValMap');
+const answerBikeProgressSliderMap = document.getElementById('answerBikeProgressSliderMap');
+const answerBikeProgressValMap = document.getElementById('answerBikeProgressValMap');
 const answerBikePlayPauseBtn = document.getElementById('answerBikePlayPauseBtn');
 const answerBikeEndBtn = document.getElementById('answerBikeEndBtn');
 const answerLineToggleBtn = document.getElementById('answerLineToggleBtn');
@@ -1486,6 +1493,51 @@ function userDrawnBikePointAt(route, elapsedMs) {
 function currentAnswerBikeSessionDuration() {
   return Math.max(answerBikeRouteCache ? answerBikeRouteCache.duration : 0, answerUserBikeRouteCache ? answerUserBikeRouteCache.duration : 0);
 }
+function updateAnswerBikeProgressUi(elapsedMs = answerBikeBaseTime) {
+  const duration = currentAnswerBikeSessionDuration();
+  const t = duration ? Math.max(0, Math.min(duration, elapsedMs || 0)) : 0;
+  const ratio = duration ? t / duration : 0;
+  if(answerBikeProgressSliderMap) answerBikeProgressSliderMap.value = Math.round(ratio * 1000);
+  if(answerBikeProgressValMap) answerBikeProgressValMap.textContent = Math.round(ratio * 100) + '%';
+}
+function prepareAnswerBikeSession() {
+  if(answerBikeRouteCache) return true;
+  displayMode = 'answer';
+  answerForced = true;
+  updateView();
+  answerBikeRouteCache = buildAnswerBikeRoute();
+  answerUserBikeRouteCache = buildUserDrawnBikeRoute();
+  if(!answerBikeRouteCache) {
+    answerUserBikeRouteCache = null;
+    statusTitle.textContent = '答えルート未登録';
+    statusHint.textContent = '先にルートモードでメモファイルを読み込んでください。';
+    hideReplayBike();
+    updateAnswerBikeProgressUi(0);
+    updateAnswerBikeControlUi();
+    return false;
+  }
+  return true;
+}
+function scrubAnswerBike() {
+  stopReplay(true);
+  if(!prepareAnswerBikeSession()) return;
+  const duration = currentAnswerBikeSessionDuration();
+  const t = duration ? Number(answerBikeProgressSliderMap.value) / 1000 * duration : 0;
+  if(answerBikeRaf !== null) {
+    answerBikeBaseTime = t;
+    answerBikeStartedAt = performance.now();
+    answerBikePaused = false;
+    answerBikeFinished = false;
+  } else {
+    answerBikeBaseTime = t;
+    answerBikePaused = t < duration - 20;
+    answerBikeFinished = t >= duration - 20;
+  }
+  renderAnswerBikeAt(t);
+  statusTitle.textContent = answerBikeRaf !== null ? '答え走行中' : '答え位置確認';
+  statusHint.textContent = '位置スライダーで戻した場所から確認できます。再生を押すと、その位置から続けます。';
+  updateAnswerBikeControlUi();
+}
 function answerBikeHasUserRoute() {
   return !!(answerUserBikeRouteCache && answerUserBikeRouteCache.segments && answerUserBikeRouteCache.segments.length);
 }
@@ -1494,6 +1546,7 @@ function renderAnswerBikeAt(elapsedMs) {
   const rect = mapWrap.getBoundingClientRect();
   if(!route || rect.width <= 0 || rect.height <= 0) {
     hideReplayBike();
+    updateAnswerBikeProgressUi(0);
     return;
   }
   const p = answerBikePointAt(route, Math.min(elapsedMs || 0, route.duration));
@@ -1510,6 +1563,7 @@ function renderAnswerBikeAt(elapsedMs) {
   } else {
     hideUserReplayBike();
   }
+  updateAnswerBikeProgressUi(elapsedMs);
 }
 function updateAnswerBikeControlUi() {
   const running = answerBikeRaf !== null;
@@ -1536,6 +1590,7 @@ function stopAnswerBike(hideBike = true) {
   answerBikePaused = false;
   answerBikeFinished = false;
   if(hideBike) hideReplayBike();
+  updateAnswerBikeProgressUi(0);
   updateAnswerBikeControlUi();
 }
 function finishAnswerBikePlayback() {
@@ -1625,22 +1680,13 @@ function startAnswerBike() {
   answerForced = true;
   opacitySlider.value = 100;
   updateView();
-  answerBikeRouteCache = buildAnswerBikeRoute();
-  answerUserBikeRouteCache = buildUserDrawnBikeRoute();
-  if(!answerBikeRouteCache) {
-    answerUserBikeRouteCache = null;
-    statusTitle.textContent = '答えルート未登録';
-    statusHint.textContent = '先にルートモードでメモファイルを読み込んでください。';
-    hideReplayBike();
-    updateAnswerBikeControlUi();
-    return;
-  }
+  if(!prepareAnswerBikeSession()) return;
   answerBikeBaseTime = 0;
   renderAnswerBikeAt(0);
   statusTitle.textContent = '答え走行中';
   statusHint.textContent = answerBikeHasUserRoute()
-    ? '公式赤線ルートのバイクと、自分で書いた線を走るバイクの2台を同時に走らせています。コース図下で一時停止・終了・赤線ON/OFFができます。'
-    : '公式赤線を表示しています。バイク走行はそのまま続きます。コース図下で一時停止・終了・赤線ON/OFFができます。';
+    ? '公式赤線ルートのバイクと、自分で書いた線を走るバイクの2台を同時に走らせています。コース図下で一時停止・終了・赤線ON/OFF・巻き戻しができます。'
+    : '公式赤線を表示しています。バイク走行はそのまま続きます。コース図下で一時停止・終了・赤線ON/OFF・巻き戻しができます。';
   runAnswerBikeLoop();
 }
 function replayDuration() {
@@ -1985,6 +2031,7 @@ replaySlider.addEventListener('input', scrubReplay);
 replaySpeedSlider.addEventListener('input', () => setReplaySpeed());
 if(answerBikeSpeedSlider) answerBikeSpeedSlider.addEventListener('input', () => setAnswerBikeSpeed(answerBikeSpeedSlider.value));
 if(answerBikeSpeedSliderMap) answerBikeSpeedSliderMap.addEventListener('input', () => setAnswerBikeSpeed(answerBikeSpeedSliderMap.value));
+if(answerBikeProgressSliderMap) answerBikeProgressSliderMap.addEventListener('input', scrubAnswerBike);
 if(answerBikePlayPauseBtn) answerBikePlayPauseBtn.addEventListener('click', toggleAnswerBikePlayPause);
 if(answerBikeEndBtn) answerBikeEndBtn.addEventListener('click', () => endAnswerBikePlayback(true));
 if(answerLineToggleBtn) answerLineToggleBtn.addEventListener('click', () => {
@@ -2012,6 +2059,7 @@ window.addEventListener('keydown', (e) => {
 
 const jsonData = null;
 setAnswerBikeSpeed(loadAnswerBikeSpeedPercent());
+updateAnswerBikeProgressUi(0);
 updateAnswerBikeControlUi();
 setReplaySpeed();
 updateAnswerRouteStatus();
